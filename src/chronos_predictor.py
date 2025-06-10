@@ -115,3 +115,12 @@ class ChronosPredictor:
                 )
 
         return forecasts
+
+def load_predictor(name: str, prediction_length: int=1, device_map: str="cuda"):
+    return ChronosPredictor(
+        model_path=name,
+        num_samples=20,
+        prediction_length=prediction_length,
+        # Change device_map to "cpu" to run on CPU or "cuda" to run on GPU
+        device_map=device_map,
+    )
