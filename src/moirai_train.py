@@ -1,13 +1,15 @@
 import torch
+import os
 
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "Salesforce/moirai-1.0-R-large"
+MODEL_NAME = "moirai_small"
 DEVICE_MAP = "cuda"
 EPOCHS = 10
 
-def finetune_moirai():
+def train():
     # Load model from checkpoint
     pretrained_module = MoiraiModule.from_pretrained(MODEL_PATH).to(DEVICE_MAP)
 
@@ -41,6 +43,8 @@ def finetune_moirai():
     train_dataloader =
     val_dataloader =
 
+    os.makedirs("checkpoints", exist_ok=True)
+
     for epoch in range(EPOCHS):
         # train step
         model.train()
@@ -57,7 +61,7 @@ def finetune_moirai():
                 model.validation_step(batch, batch_idx=0)
 
         # Save checkpoint
-        torch.save({'state_dict': model.state_dict()}, f"moirai_epoch{epoch}.ckpt")
+        torch.save({'state_dict': model.state_dict()}, f"checkpoints/{MODEL_NAME}_epoch_{epoch}.ckpt")
 
 if __name__ == "__main__":
-    finetune_moirai()
+    train()
