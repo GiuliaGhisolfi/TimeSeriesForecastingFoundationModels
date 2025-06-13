@@ -60,6 +60,8 @@ def train():
             for batch in val_dataloader:
                 model.validation_step(batch, batch_idx=0)
 
+        # TODO: early stopping + save loss
+
         # Save checkpoint
         torch.save({'state_dict': model.state_dict()}, f"checkpoints/{MODEL_NAME}_epoch_{epoch}.ckpt")
 

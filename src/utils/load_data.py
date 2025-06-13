@@ -1,90 +1,136 @@
-from datasets import load_dataset
+from random import sample, seed
 
-CHRONOS = "autogluon/chronos_datasets"
-DATASET_CHRONOS = [
-    "electricity_15min",
-    #"m4_daily",
-    #"m4_hourly",
-    #"m4_monthly",
-    #"m4_weekly",
-    "mexico_city_bikes",
-    "monash_electricity_hourly",
-    "monash_electricity_weekly",
-    #"monash_kdd_cup_2018",
-    #"monash_london_smart_meters",
-    #"monash_pedestrian_counts",
-    #"monash_rideshare",
-    #"monash_saugeenday",
-    #"monash_temperature_rain",
-    #"monash_tourism_monthly",
-    #"solar",
-    #"solar_1h",
-    "taxi_1h",
-    #"taxi_30min",
-    "training_corpus_kernel_synth_1m", # 10M TSMixup augmentations of real-world data
-    "training_corpus_tsmixup_10m", # 1M synthetic time series generated with KernelSynth
-    #"uber_tlc_daily",
-    #"uber_tlc_hourly",
-    "ushcn_daily",
-    "weatherbench_daily",
-    "weatherbench_hourly_10m_u_component_of_wind",
-    "weatherbench_hourly_10m_v_component_of_wind",
-    "weatherbench_hourly_2m_temperature",
-    "weatherbench_hourly_geopotential",
-    "weatherbench_hourly_potential_vorticity",
-    "weatherbench_hourly_relative_humidity",
-    "weatherbench_hourly_specific_humidity",
-    "weatherbench_hourly_temperature",
-    "weatherbench_hourly_toa_incident_solar_radiation",
-    "weatherbench_hourly_total_cloud_cover",
-    "weatherbench_hourly_total_precipitation",
-    "weatherbench_hourly_u_component_of_wind",
-    "weatherbench_hourly_v_component_of_wind",
-    "weatherbench_hourly_vorticity",
-    "weatherbench_weekly",
-    "wiki_daily_100k",
-    #"wind_farms_daily",
-    #"wind_farms_hourly",
-]
+import pandas as pd
+import yaml
+from datasets import (Dataset, Value, concatenate_datasets,
+                      interleave_datasets, load_dataset)
 
-CHRONOS_EXTRA = "autogluon/chronos_datasets_extra"
-DATASET_CHRONOS_EXTRA = [
-    "spanish_energy_and_weather",
-    "brazilian_cities_temperature",
-]
+RANDOM_SEED = 42
+LOTSA_FRACTION = 0.1
 
-ETT = "ett"
-DATASET_ETT = [
-    "m1",
-    "m2",
-    "h1",
-    "h2",
-]
+FREQ_MAP_ETT = {
+    "m1": "15T",
+    "m2": "15T",
+    "h1": "1H",
+    "h2": "1H"
+}
 
-def load_data():
+def infer_frequency_from_timestamps(timestamps):
+    if len(timestamps) < 2:
+        return "unknown"
+
+    # Convert first two to pandas datetime
+    t0 = pd.to_datetime(timestamps[0])
+    t1 = pd.to_datetime(timestamps[1])
+
+    delta = t1 - t0
+
+    seconds = int(delta.total_seconds())
+    
+    if seconds < 60:
+        return f"{seconds}S"
+    elif seconds < 3600:
+        return f"{seconds // 60}T"
+    elif seconds < 86400:
+        return f"{seconds // 3600}H"
+    elif seconds < 604800:
+        return f"{seconds // 86400}D"
+    elif seconds < 2592000:
+        return f"{seconds // 604800}W"
+    else:
+        return f"{seconds // 2592000}M"
+
+def load_data(yaml_path="data/datasets.yaml"):
     datasets_list = []
 
-    # Load datasets from CHRONOS
-    for dataset_name in DATASET_CHRONOS:
-        print(f"Loading {dataset_name}...")
-        try:
-            ds = load_dataset(CHRONOS, dataset_name, split="train", trust_remote_code=True)
-            datasets_list.append(ds)
-        except Exception as e:
-            print(f"Failed to load {dataset_name}: {e}")
+    # Load dataset names from YAML
+    with open(yaml_path, "r") as f:
+        datasets_config = yaml.safe_load(f)
 
-    # Load datasets from CHRONOS_EXTRA
-    for dataset_name in DATASET_CHRONOS_EXTRA:
-        print(f"Loading {dataset_name}...")
-        try:
-            ds = load_dataset(CHRONOS_EXTRA, dataset_name, split="train", trust_remote_code=True)
-            datasets_list.append(ds)
-        except Exception as e:
-            print(f"Failed to load {dataset_name}: {e}")
+    for group_name, dataset_names in datasets_config.items():
+        print(f"\nLoading group: {group_name}")
+
+        if group_name in ["autogluon/chronos_datasets", "autogluon/chronos_datasets_extra"]:
+            for dataset_name in dataset_names[:1]:
+                break #TODO
+                print(f"Loading {dataset_name}...")
+                try:
+                    ds = load_dataset(group_name, dataset_name, split="train", trust_remote_code=True)
+
+                    # Adapt to LOTSA structure
+                    if "id" in ds.column_names:
+                        ds = ds.rename_column("id", "item_id")
+                    if "target" not in ds.column_names:
+                        target_name = ds.column_names[-1]
+                        ds = ds.rename_column(target_name, "target")
+                    # Add "start" and "freq"
+                    data = [x for x in ds]
+                    df = pd.DataFrame(data)
+                    freq = df["timestamp"].apply(infer_frequency_from_timestamps)
+                    ds = ds.add_column("freq", freq)
+                    start = df["timestamp"].apply(lambda ts: ts[0] if isinstance(ts, list) and len(ts) > 0 else None)
+                    start = pd.to_datetime(start, errors="coerce").astype("datetime64[ns]")
+                    ds = ds.add_column("start", start)
+                    # Remove unnecessary features
+                    ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
+                    # Dataset name
+                    ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
+
+                    datasets_list.append(ds)
+                except Exception as e:
+                    print(f"Failed to load {dataset_name} from {group_name}: {e}")
+
+        elif group_name == "ett":
+            for dataset_name in dataset_names:
+                print(f"Loading {dataset_name}...")
+                try:
+                    ds = load_dataset(group_name, dataset_name, trust_remote_code=True)["train"]
+
+                    # Adapt to LOTSA structure
+                    freq_value = FREQ_MAP_ETT.get(dataset_name)
+                    ds = ds.add_column("freq", [freq_value] * len(ds))
+                    # Cast "start" to timestamp[ns]
+                    ds = ds.cast_column("start", Value("timestamp[ns]"))
+                    # Remove unnecessary features
+                    ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
+                    # Dataset name
+                    ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
+
+                    datasets_list.append(ds)
+                except Exception as e:
+                    print(f"Failed to load {dataset_name} from {group_name}: {e}")
+
+        elif group_name == "Salesforce/lotsa_data":
+            for dataset_name in dataset_names[1:2]:
+                print(f"Loading {dataset_name}...")
+                try:
+                    full_ds = load_dataset(group_name, dataset_name, trust_remote_code=True)["train"]
+                    num_samples = int(LOTSA_FRACTION * len(full_ds))
+                    ds = full_ds.shuffle(seed=RANDOM_SEED).select(range(num_samples))
+
+                    # Cast "start" to timestamp[ns]
+                    ds = ds.cast_column("start", Value("timestamp[ns]"))
+                    # Remove unnecessary features
+                    ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
+                    # Dataset name
+                    ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
+
+                    datasets_list.append(ds)
+                except Exception as e:
+                    print(f"Failed to load {dataset_name} from {group_name}: {e}")
+
+        else:
+            print(f"Unknown group: {group_name}, skipping...")
+            continue
 
     # Concatenate all datasets
     if datasets_list:
-        full_train_dataset = concatenate_datasets(datasets_list)
+        from datasets import Dataset
+
+        full_train_dataset = Dataset.from_dict({k: v for ds in datasets_list for k, v in ds.to_dict().items()})
         return full_train_dataset
     else:
         raise ValueError("No datasets were loaded successfully.")
+    
+if __name__ == "__main__":
+    load_data()
