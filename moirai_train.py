@@ -3,13 +3,14 @@ import os
 import torch
 from torch.utils.data import DataLoader
 
-from src.utils.utils import get_train_and_val_datasets
+from src.utils.moirai_utils import get_train_and_val_datasets
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "Salesforce/moirai-1.0-R-large"
 MODEL_NAME = "moirai_small"
 DEVICE_MAP = "cuda"
+
 EPOCHS = 10
 TEST_SIZE = 0.2
 
