@@ -1,11 +1,12 @@
+import json
 import os
 
 import torch
 from torch.utils.data import DataLoader
 
-from src.utils.moirai_utils import get_train_and_val_datasets
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
+from utils.moirai_utils import get_train_and_val_datasets
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "Salesforce/moirai-1.0-R-large"
 MODEL_NAME = "moirai_small"
@@ -13,6 +14,7 @@ DEVICE_MAP = "cuda"
 
 EPOCHS = 10
 TEST_SIZE = 0.2
+PATIENCE = 3 # Early stopping patience
 
 def train():
     # Load model from checkpoint
@@ -52,25 +54,67 @@ def train():
 
     os.makedirs("checkpoints", exist_ok=True)
 
+    best_val_loss = float("inf")
+    patience_counter = 0
+    val_losses = []
+    train_losses = []
+
     for epoch in range(EPOCHS):
-        # train step
+        print(f"Epoch {epoch + 1}/{EPOCHS}")
+
+        # Train
         model.train()
+        train_loss_total = 0
+
         for batch in train_dataloader:
             optimizer.zero_grad()
             loss = model.training_step(batch, batch_idx=0)
             loss.backward()
             optimizer.step()
+            train_loss_total += loss.item()
+        
+        train_loss_avg = train_loss_total / len(train_dataloader)
+        train_losses.append(train_loss_avg)
 
-        # validation step
+        print(f"Epoch {epoch}: Train Loss = {train_loss_avg:.4f}")
+
+        # Validation
         model.eval()
+        val_loss_total = 0
+
         with torch.no_grad():
             for batch in val_dataloader:
-                model.validation_step(batch, batch_idx=0)
+                val_loss = model.validation_step(batch, batch_idx=0)
+                val_loss_total += val_loss.item()
+        
+        val_loss_avg = val_loss_total / len(val_dataloader)
+        val_losses.append(val_loss_avg)
 
-        # TODO: early stopping + save loss
+        print(f"Epoch {epoch}: Val Loss = {val_loss_avg:.4f}")
 
-        # Save checkpoint
+        # Early stopping logic
+        if val_loss_avg < best_val_loss:
+            best_val_loss = val_loss_avg
+            patience_counter = 0
+            # Save best model so far
+            torch.save({'state_dict': model.state_dict()}, f"checkpoints/{MODEL_NAME}_best.ckpt")
+        else:
+            patience_counter += 1
+            if patience_counter >= PATIENCE:
+                print("Early stopping triggered.")
+                break
+
+        # Save checkpoint per epoch
         torch.save({'state_dict': model.state_dict()}, f"checkpoints/{MODEL_NAME}_epoch_{epoch}.ckpt")
+
+    # Save validation and training losses
+    os.makedirs("results", exist_ok=True)
+
+    with open("results/{MODEL_NAME}_train_losses.json", "w") as f:
+        json.dump(train_losses, f)
+    with open("results/{MODEL_NAME}_val_losses.json", "w") as f:
+        json.dump(val_losses, f)
+
 
 if __name__ == "__main__":
     train()

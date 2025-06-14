@@ -3,7 +3,7 @@ import random
 
 from datasets import Dataset
 
-from src.utils.load_moirai_data import load_data
+from utils.load_moirai_data import load_data
 
 RANDOM_SEED = 42
 TEST_SIZE = 0.2

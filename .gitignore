@@ -1,2 +1,3 @@
 __pycache__
-data/moirai
+src/data/moirai
+src/checkpoints
