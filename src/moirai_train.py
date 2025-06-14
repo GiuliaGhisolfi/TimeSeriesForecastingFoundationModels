@@ -1,6 +1,10 @@
-import torch
 import os
 
+import torch
+from torch.utils.data import DataLoader
+
+from src.utils.load_data import load_data
+from src.utils.utils import stratified_split
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
@@ -8,6 +12,7 @@ MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "
 MODEL_NAME = "moirai_small"
 DEVICE_MAP = "cuda"
 EPOCHS = 10
+TEST_SIZE = 0.2
 
 def train():
     # Load model from checkpoint
@@ -40,8 +45,12 @@ def train():
         )
 
     # Load train and validation data
-    train_dataloader =
-    val_dataloader =
+    full_dataset = load_data()
+    train_dataset, val_dataset = stratified_split(
+        full_dataset, stratify_col="dataset", test_size=TEST_SIZE)
+
+    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
     os.makedirs("checkpoints", exist_ok=True)
 

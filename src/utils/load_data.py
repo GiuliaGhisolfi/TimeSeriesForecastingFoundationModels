@@ -2,8 +2,7 @@ from random import sample, seed
 
 import pandas as pd
 import yaml
-from datasets import (Dataset, Value, concatenate_datasets,
-                      interleave_datasets, load_dataset)
+from datasets import Dataset, Features, Sequence, Value, load_dataset
 
 RANDOM_SEED = 42
 LOTSA_FRACTION = 0.1
@@ -40,6 +39,13 @@ def infer_frequency_from_timestamps(timestamps):
     else:
         return f"{seconds // 2592000}M"
 
+def unify_target_shape(example):
+    if isinstance(example["target"][0], float):
+        example["target"] = [[float(v)] for v in example["target"]]
+    else:
+        example["target"] = [[float(val) for val in row] for row in example["target"]]
+    return example
+
 def load_data(yaml_path="data/datasets.yaml"):
     datasets_list = []
 
@@ -51,8 +57,7 @@ def load_data(yaml_path="data/datasets.yaml"):
         print(f"\nLoading group: {group_name}")
 
         if group_name in ["autogluon/chronos_datasets", "autogluon/chronos_datasets_extra"]:
-            for dataset_name in dataset_names[:1]:
-                break #TODO
+            for dataset_name in dataset_names:
                 print(f"Loading {dataset_name}...")
                 try:
                     ds = load_dataset(group_name, dataset_name, split="train", trust_remote_code=True)
@@ -75,6 +80,7 @@ def load_data(yaml_path="data/datasets.yaml"):
                     ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
+                    ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
 
                     datasets_list.append(ds)
                 except Exception as e:
@@ -95,13 +101,14 @@ def load_data(yaml_path="data/datasets.yaml"):
                     ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
+                    ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
 
                     datasets_list.append(ds)
                 except Exception as e:
                     print(f"Failed to load {dataset_name} from {group_name}: {e}")
 
         elif group_name == "Salesforce/lotsa_data":
-            for dataset_name in dataset_names[1:2]:
+            for dataset_name in dataset_names:
                 print(f"Loading {dataset_name}...")
                 try:
                     full_ds = load_dataset(group_name, dataset_name, trust_remote_code=True)["train"]
@@ -114,6 +121,7 @@ def load_data(yaml_path="data/datasets.yaml"):
                     ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
+                    ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
 
                     datasets_list.append(ds)
                 except Exception as e:
@@ -125,9 +133,20 @@ def load_data(yaml_path="data/datasets.yaml"):
 
     # Concatenate all datasets
     if datasets_list:
-        from datasets import Dataset
+        unified_examples = []
+        for ds in datasets_list:
+            ds = ds.map(unify_target_shape)
+            unified_examples.extend(ds)
 
-        full_train_dataset = Dataset.from_dict({k: v for ds in datasets_list for k, v in ds.to_dict().items()})
+        features = Features({
+            "item_id": Value("string"),
+            "start": Value("timestamp[ns]"),
+            "freq": Value("string"),
+            "target": Sequence(Sequence(Value("float32"))),
+            "dataset": Value("string"),
+        })
+
+        full_train_dataset = Dataset.from_list(unified_examples, features=features)
         return full_train_dataset
     else:
         raise ValueError("No datasets were loaded successfully.")
