@@ -1,6 +1,7 @@
+import os
 import random
 
-from datasets import Dataset
+from datasets import Dataset, load_from_disk
 
 from src.utils.load_data import load_data
 
@@ -29,10 +30,37 @@ def stratified_split(dataset, stratify_col="dataset", test_size=0.2, seed=RANDOM
 
 def get_train_and_val_datasets(yaml_path="data/datasets.yaml", stratify_col="dataset", test_size=0.2, seed=RANDOM_SEED):
     # Check if datset are already loaded
-    #TODO
-    # Load train and validation data
+    if os.path.exists("data/train_dataset") and os.path.exists("data/val_dataset"):
+        print("Train and validation datasets already exist. Loading from disk...")
+
+        train_dataset = Dataset.load_from_disk("data/train_dataset")
+        val_dataset = Dataset.load_from_disk("data/val_dataset")
+    
+    else:
+        print("Train and validation datasets do not exist. Loading from YAML and splitting...")
+
+        # Load train and validation data
+        full_dataset = load_data(yaml_path=yaml_path)
+        train_dataset, val_dataset = stratified_split(
+            full_dataset, stratify_col=stratify_col, test_size=test_size, seed=seed)
+    
+    return train_dataset, val_dataset
+
+def save_train_and_val_datasets(yaml_path="data/datasets.yaml", stratify_col="dataset", test_size=0.2, seed=RANDOM_SEED):
     full_dataset = load_data(yaml_path=yaml_path)
     train_dataset, val_dataset = stratified_split(
         full_dataset, stratify_col=stratify_col, test_size=test_size, seed=seed)
     
-    return train_dataset, val_dataset
+    # Save datasets to disk
+    os.makedirs("data", exist_ok=True)
+    train_path = "data/train_dataset"
+    val_path = "data/val_dataset"
+
+    train_dataset.save_to_disk(train_path)
+    val_dataset.save_to_disk(val_path)
+
+    print(f"Train dataset saved to {train_path}")
+    print(f"Validation dataset saved to {val_path}")
+
+if __name__ == "__main__":
+    save_train_and_val_datasets()
