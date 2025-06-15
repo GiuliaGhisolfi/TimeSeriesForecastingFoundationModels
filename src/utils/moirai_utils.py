@@ -5,6 +5,9 @@ import pandas as pd
 from datasets import Dataset
 from torch.utils.data._utils.collate import default_collate
 
+from uni2ts.data.dataset import SampleTimeSeriesType, TimeSeriesDataset
+from uni2ts.data.indexer.hf_dataset_indexer import HuggingFaceDatasetIndexer
+from uni2ts.transform import Identity
 from utils.load_moirai_data import load_data
 
 RANDOM_SEED = 42
@@ -21,48 +24,53 @@ def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=
 
     for group_rows in groups.values():
         rng.shuffle(group_rows)
-        n_test = int(len(group_rows) * test_size)
-        val_splits.extend(group_rows[:n_test])
-        train_splits.extend(group_rows[n_test:])
+        n_val = int(len(group_rows) * test_size)
+        val_splits.extend(group_rows[:n_val])
+        train_splits.extend(group_rows[n_val:])
 
+    #return train_splits, val_splits
     train_dataset = Dataset.from_list(train_splits, features=dataset.features)
     val_dataset = Dataset.from_list(val_splits, features=dataset.features)
 
     return train_dataset, val_dataset
 
+def to_timeseries_dataset(indexed_dataset, transform=Identity(), sample_time_series=SampleTimeSeriesType.NONE):
+    indexer = HuggingFaceDatasetIndexer(indexed_dataset)
+    return TimeSeriesDataset(
+        indexer=indexer,
+        transform=transform, # Identity == no transformation is needed
+        sample_time_series=sample_time_series, # SampleTimeSeriesType.NONE/UNIFORM/PROPORTIONAL
+    )
+
 def get_train_and_val_datasets(yaml_path="data/datasets.yaml", stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED):
     # Check if datset are already loaded
-    if os.path.exists("data/moirai/train_dataset") and os.path.exists("data/moirai/val_dataset"):
+    if os.path.exists("data/moirai_dataset"):
         print("Train and validation datasets already exist. Loading from disk...")
 
-        train_dataset = Dataset.load_from_disk("data/moirai/train_dataset")
-        val_dataset = Dataset.load_from_disk("data/moirai/val_dataset")
+        indexed_dataset = Dataset.load_from_disk("data/moirai_dataset")
     
     else:
         print("Train and validation datasets do not exist. Loading from YAML and splitting...")
 
         # Load train and validation data
-        full_dataset = load_data(yaml_path=yaml_path)
-        train_dataset, val_dataset = stratified_split(
-            full_dataset, stratify_col=stratify_col, test_size=test_size, seed=seed)
-    
-    return train_dataset, val_dataset
+        indexed_dataset = load_data(yaml_path=yaml_path)
 
-def save_train_and_val_datasets(yaml_path="data/datasets.yaml", stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED):
-    full_dataset = load_data(yaml_path=yaml_path)
+    # Stratified split
     train_dataset, val_dataset = stratified_split(
-        full_dataset, stratify_col=stratify_col, test_size=test_size, seed=seed)
+        indexed_dataset, stratify_col=stratify_col, test_size=test_size, seed=seed)
+
+    return to_timeseries_dataset(train_dataset), to_timeseries_dataset(val_dataset)
+
+def save_train_and_val_datasets(yaml_path="data/datasets.yaml"):
+    full_dataset = load_data(yaml_path=yaml_path)
 
     # Save datasets to disk
-    os.makedirs("data/moirai", exist_ok=True)
-    train_path = "data/moirai/train_dataset"
-    val_path = "data/moirai/val_dataset"
+    os.makedirs("data", exist_ok=True)
+    path = "data/moirai_dataset"
 
-    train_dataset.save_to_disk(train_path)
-    val_dataset.save_to_disk(val_path)
+    full_dataset.save_to_disk(path)
 
-    print(f"Train dataset saved to {train_path}")
-    print(f"Validation dataset saved to {val_path}")
+    print(f"Dataset saved to {path}")
 
 def custom_collate_fn(batch):
     for i, item in enumerate(batch):

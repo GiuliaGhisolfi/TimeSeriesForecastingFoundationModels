@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader
 from uni2ts.data.loader import PadCollate
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
-from utils.load_moirai_data import convert_to_tensor
 from utils.moirai_utils import custom_collate_fn, get_train_and_val_datasets
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "Salesforce/moirai-1.0-R-large"
@@ -50,20 +49,15 @@ def train():
 
     # Load train and validation data
     train_dataset, val_dataset = get_train_and_val_datasets()
-    
-    train_dataset["target"] = [torch.tensor(s["target"]) for s in train_dataset]
-    val_dataset["target"] = [torch.tensor(s["target"]) for s in val_dataset]
 
-    max_length = max(torch.tensor(s["target"]).shape[0] for s in train_dataset)
-    max_length = max(max_length, max(torch.tensor(s["target"]).shape[0] for s in val_dataset))
+    max_length = max(len(s["target"]) for s in train_dataset)
+    max_length = max(max_length, max(len(s["target"]) for s in val_dataset))
     collate_fn = PadCollate(
         seq_fields=["target"],
         target_field="target",
         pad_func_map={"target": torch.zeros},
         max_length=max_length,
     )
-
-    #train_dataset, val_dataset = train_dataset.map(convert_to_tensor), val_dataset.map(convert_to_tensor)
 
     train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate_fn)
     val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False, collate_fn=collate_fn)
