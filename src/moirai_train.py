@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from uni2ts.data.loader import PadCollate
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
-from utils.moirai_utils import custom_collate_fn, get_train_and_val_datasets
+from utils.moirai_utils import get_train_and_val_datasets
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "Salesforce/moirai-1.0-R-large"
 MODEL_NAME = "moirai_small"
@@ -53,6 +53,7 @@ def train():
     max_length = max(len(s["target"]) for s in train_dataset)
     max_length = max(max_length, max(len(s["target"]) for s in val_dataset))
     collate_fn = PadCollate(
+        # Custom collate function to handle padding
         seq_fields=["target"],
         target_field="target",
         pad_func_map={"target": torch.zeros},
@@ -79,6 +80,7 @@ def train():
         for batch in train_dataloader:
             optimizer.zero_grad()
             loss = model.training_step(batch, batch_idx=0)
+            #loss = torch.tensor(loss, dtype=torch.float32, device=batch["target"].device) # FIXME
             loss.backward()
             optimizer.step()
             train_loss_total += loss.item()

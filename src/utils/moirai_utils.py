@@ -1,9 +1,7 @@
 import os
 import random
 
-import pandas as pd
 from datasets import Dataset
-from torch.utils.data._utils.collate import default_collate
 
 from uni2ts.data.dataset import SampleTimeSeriesType, TimeSeriesDataset
 from uni2ts.data.indexer.hf_dataset_indexer import HuggingFaceDatasetIndexer
@@ -42,17 +40,16 @@ def to_timeseries_dataset(indexed_dataset, transform=Identity(), sample_time_ser
         sample_time_series=sample_time_series, # SampleTimeSeriesType.NONE/UNIFORM/PROPORTIONAL
     )
 
-def get_train_and_val_datasets(yaml_path="data/datasets.yaml", stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED):
+def get_train_and_val_datasets(dataset_path="data/moirai_dataset", yaml_path="data/datasets.yaml",
+        stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED):
     # Check if datset are already loaded
     if os.path.exists("data/moirai_dataset"):
         print("Train and validation datasets already exist. Loading from disk...")
-
-        indexed_dataset = Dataset.load_from_disk("data/moirai_dataset")
-    
+        # Load train and validation data
+        indexed_dataset = Dataset.load_from_disk(dataset_path)
     else:
         print("Train and validation datasets do not exist. Loading from YAML and splitting...")
-
-        # Load train and validation data
+        # Load the full dataset from YAML
         indexed_dataset = load_data(yaml_path=yaml_path)
 
     # Stratified split
@@ -61,21 +58,11 @@ def get_train_and_val_datasets(yaml_path="data/datasets.yaml", stratify_col="dat
 
     return to_timeseries_dataset(train_dataset), to_timeseries_dataset(val_dataset)
 
-def save_train_and_val_datasets(yaml_path="data/datasets.yaml"):
+def save_train_and_val_datasets(yaml_path="data/datasets.yaml", dataset_path="data/moirai_dataset"):
     full_dataset = load_data(yaml_path=yaml_path)
 
     # Save datasets to disk
     os.makedirs("data", exist_ok=True)
-    path = "data/moirai_dataset"
+    full_dataset.save_to_disk(dataset_path)
 
-    full_dataset.save_to_disk(path)
-
-    print(f"Dataset saved to {path}")
-
-def custom_collate_fn(batch):
-    for i, item in enumerate(batch):
-        for k in list(item.keys()):
-            if isinstance(item[k], pd.Timestamp):
-                # Convert to float (UNIX time) or string
-                item[k] = item[k].timestamp()
-    return default_collate(batch)
+    print(f"Dataset saved to {dataset_path}")
