@@ -56,7 +56,7 @@ def train():
     max_length = max(len(s["target"]) for s in train_dataset)
     max_length = max(max_length, max(len(s["target"]) for s in val_dataset))
 
-    collate_fn = CostumPadCollate(
+    collate_fn = CostumPadCollate( # FIXME: Use PadCollate and fix dataset type in the dataloader (all keys)
         # Custom collate function to handle padding
         seq_fields=["target"],
         target_field="target",
@@ -84,7 +84,6 @@ def train():
         for batch in train_dataloader:
             optimizer.zero_grad()
             loss = model.training_step(batch, batch_idx=0)
-            #loss = torch.tensor(loss, dtype=torch.float32, device=batch["target"].device) # FIXME
             loss.backward()
             optimizer.step()
             train_loss_total += loss.item()
