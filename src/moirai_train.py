@@ -2,12 +2,15 @@ import json
 import os
 
 import torch
-from torch.utils.data import DataLoader
 
+from moirai_utils.loader import CostumPadCollate
 from moirai_utils.moirai_utils import get_train_and_val_datasets, pad_tensor
-from uni2ts.data.loader import PackCollate, PadCollate
+from uni2ts.data.loader import DataLoader, PadCollate
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
+
+#from torch.utils.data import DataLoader as TorchDataLoader
+
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "Salesforce/moirai-1.0-R-large"
 MODEL_NAME = "moirai_small"
@@ -53,7 +56,7 @@ def train():
     max_length = max(len(s["target"]) for s in train_dataset)
     max_length = max(max_length, max(len(s["target"]) for s in val_dataset))
 
-    collate_fn = PadCollate(
+    collate_fn = CostumPadCollate(
         # Custom collate function to handle padding
         seq_fields=["target"],
         target_field="target",
