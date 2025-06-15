@@ -3,10 +3,10 @@ import random
 
 from datasets import Dataset
 
+from moirai_utils.load_moirai_data import load_data
 from uni2ts.data.dataset import SampleTimeSeriesType, TimeSeriesDataset
 from uni2ts.data.indexer.hf_dataset_indexer import HuggingFaceDatasetIndexer
 from uni2ts.transform import Identity
-from utils.load_moirai_data import load_data
 
 RANDOM_SEED = 42
 TEST_SIZE = 0.2
@@ -66,3 +66,4 @@ def save_train_and_val_datasets(yaml_path="data/datasets.yaml", dataset_path="da
     full_dataset.save_to_disk(dataset_path)
 
     print(f"Dataset saved to {dataset_path}")
+

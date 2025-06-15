@@ -4,10 +4,10 @@ import os
 import torch
 from torch.utils.data import DataLoader
 
+from moirai_utils.moirai_utils import get_train_and_val_datasets
 from uni2ts.data.loader import PadCollate
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
-from utils.moirai_utils import get_train_and_val_datasets
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "Salesforce/moirai-1.0-R-large"
 MODEL_NAME = "moirai_small"
@@ -48,7 +48,7 @@ def train():
         )
 
     # Load train and validation data
-    train_dataset, val_dataset = get_train_and_val_datasets()
+    train_dataset, val_dataset = get_train_and_val_datasets(test_size=TEST_SIZE)
 
     max_length = max(len(s["target"]) for s in train_dataset)
     max_length = max(max_length, max(len(s["target"]) for s in val_dataset))

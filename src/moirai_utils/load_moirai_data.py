@@ -1,13 +1,9 @@
 import numpy as np
 import pandas as pd
-import torch
 import yaml
 from datasets import Dataset, Features, Sequence, Value, load_dataset
 
 from uni2ts.common.typing import MultivarTimeSeries
-from uni2ts.data.dataset import SampleTimeSeriesType, TimeSeriesDataset
-from uni2ts.data.indexer.hf_dataset_indexer import HuggingFaceDatasetIndexer
-from uni2ts.transform import Identity
 
 RANDOM_SEED = 42
 LOTSA_FRACTION = 0.1
