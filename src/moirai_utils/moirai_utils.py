@@ -1,6 +1,7 @@
 import os
 import random
 
+import torch
 from datasets import Dataset
 
 from moirai_utils.load_moirai_data import load_data
@@ -10,6 +11,9 @@ from uni2ts.data.indexer.hf_dataset_indexer import HuggingFaceDatasetIndexer
 
 RANDOM_SEED = 42
 TEST_SIZE = 0.2
+
+def pad_tensor(shape, dtype=torch.float32):
+        return torch.zeros(shape, dtype=dtype)
 
 def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED):
     groups = {}
