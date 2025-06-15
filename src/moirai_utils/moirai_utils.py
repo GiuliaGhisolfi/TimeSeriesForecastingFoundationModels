@@ -4,9 +4,9 @@ import random
 from datasets import Dataset
 
 from moirai_utils.load_moirai_data import load_data
+from moirai_utils.transformations import ToTorch
 from uni2ts.data.dataset import SampleTimeSeriesType, TimeSeriesDataset
 from uni2ts.data.indexer.hf_dataset_indexer import HuggingFaceDatasetIndexer
-from uni2ts.transform import Identity
 
 RANDOM_SEED = 42
 TEST_SIZE = 0.2
@@ -32,7 +32,7 @@ def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=
 
     return train_dataset, val_dataset
 
-def to_timeseries_dataset(indexed_dataset, transform=Identity(), sample_time_series=SampleTimeSeriesType.NONE):
+def to_timeseries_dataset(indexed_dataset, transform=ToTorch(), sample_time_series=SampleTimeSeriesType.NONE):
     indexer = HuggingFaceDatasetIndexer(indexed_dataset)
     return TimeSeriesDataset(
         indexer=indexer,

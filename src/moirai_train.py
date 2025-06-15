@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from moirai_utils.moirai_utils import get_train_and_val_datasets
-from uni2ts.data.loader import PadCollate
+from uni2ts.data.loader import PackCollate, PadCollate
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
@@ -56,7 +56,8 @@ def train():
         # Custom collate function to handle padding
         seq_fields=["target"],
         target_field="target",
-        pad_func_map={"target": torch.zeros},
+        #pad_func_map={"target": torch.zeros},
+        pad_func_map={"target": lambda shape: torch.zeros(shape, dtype=torch.float32)},
         max_length=max_length,
     )
 
