@@ -4,13 +4,15 @@ import os
 import torch
 from torch.utils.data import DataLoader
 
+from uni2ts.data.loader import PadCollate
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
-from utils.moirai_utils import get_train_and_val_datasets
+from utils.load_moirai_data import convert_to_tensor
+from utils.moirai_utils import custom_collate_fn, get_train_and_val_datasets
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "Salesforce/moirai-1.0-R-large"
 MODEL_NAME = "moirai_small"
-DEVICE_MAP = "cuda"
+DEVICE_MAP = "cpu"
 
 EPOCHS = 10
 TEST_SIZE = 0.2
@@ -41,16 +43,30 @@ def train():
 
     optimizer = torch.optim.AdamW(
         model.parameters(),
-        lr=model.lr,
-        betas=(model.beta1, model.beta2),
-        weight_decay=model.weight_decay
+        lr=model._hparams['lr'],
+        betas=(model._hparams['beta1'], model._hparams['beta2']),
+        weight_decay=model._hparams['weight_decay']
         )
 
     # Load train and validation data
     train_dataset, val_dataset = get_train_and_val_datasets()
+    
+    train_dataset["target"] = [torch.tensor(s["target"]) for s in train_dataset]
+    val_dataset["target"] = [torch.tensor(s["target"]) for s in val_dataset]
 
-    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    max_length = max(torch.tensor(s["target"]).shape[0] for s in train_dataset)
+    max_length = max(max_length, max(torch.tensor(s["target"]).shape[0] for s in val_dataset))
+    collate_fn = PadCollate(
+        seq_fields=["target"],
+        target_field="target",
+        pad_func_map={"target": torch.zeros},
+        max_length=max_length,
+    )
+
+    #train_dataset, val_dataset = train_dataset.map(convert_to_tensor), val_dataset.map(convert_to_tensor)
+
+    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate_fn)
+    val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False, collate_fn=collate_fn)
 
     os.makedirs("checkpoints", exist_ok=True)
 
@@ -72,7 +88,7 @@ def train():
             loss.backward()
             optimizer.step()
             train_loss_total += loss.item()
-        
+
         train_loss_avg = train_loss_total / len(train_dataloader)
         train_losses.append(train_loss_avg)
 
@@ -92,11 +108,11 @@ def train():
 
         print(f"Epoch {epoch}: Val Loss = {val_loss_avg:.4f}")
 
-        # Early stopping logic
+        # Early stopping
         if val_loss_avg < best_val_loss:
             best_val_loss = val_loss_avg
             patience_counter = 0
-            # Save best model so far
+            # Save best model
             torch.save({'state_dict': model.state_dict()}, f"checkpoints/{MODEL_NAME}_best.ckpt")
         else:
             patience_counter += 1

@@ -1,7 +1,9 @@
 import os
 import random
 
+import pandas as pd
 from datasets import Dataset
+from torch.utils.data._utils.collate import default_collate
 
 from utils.load_moirai_data import load_data
 
@@ -61,3 +63,11 @@ def save_train_and_val_datasets(yaml_path="data/datasets.yaml", stratify_col="da
 
     print(f"Train dataset saved to {train_path}")
     print(f"Validation dataset saved to {val_path}")
+
+def custom_collate_fn(batch):
+    for i, item in enumerate(batch):
+        for k in list(item.keys()):
+            if isinstance(item[k], pd.Timestamp):
+                # Convert to float (UNIX time) or string
+                item[k] = item[k].timestamp()
+    return default_collate(batch)

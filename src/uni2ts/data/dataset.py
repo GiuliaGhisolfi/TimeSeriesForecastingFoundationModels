@@ -19,18 +19,12 @@ from typing import Any
 import numpy as np
 from torch.utils.data import Dataset
 
-from moirai.common.sampler import Sampler, get_sampler
-from moirai.common.typing import (
-    BatchedData,
-    BatchedDateTime,
-    BatchedString,
-    Data,
-    FlattenedData,
-    MultivarTimeSeries,
-    UnivarTimeSeries,
-)
-from moirai.data.indexer import Indexer
-from moirai.transform import Transformation
+from uni2ts.common.sampler import Sampler, get_sampler
+from uni2ts.common.typing import (BatchedData, BatchedDateTime, BatchedString,
+                                  Data, FlattenedData, MultivarTimeSeries,
+                                  UnivarTimeSeries)
+from uni2ts.data.indexer._base import Indexer
+from uni2ts.transform import Transformation
 
 
 class SampleTimeSeriesType(Enum):

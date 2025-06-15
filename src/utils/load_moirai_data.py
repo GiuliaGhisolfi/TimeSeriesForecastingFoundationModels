@@ -1,8 +1,15 @@
 from random import sample, seed
 
+import numpy as np
 import pandas as pd
+import torch
 import yaml
 from datasets import Dataset, Features, Sequence, Value, load_dataset
+
+from uni2ts.common.typing import MultivarTimeSeries, UnivarTimeSeries
+from uni2ts.data.dataset import SampleTimeSeriesType, TimeSeriesDataset
+from uni2ts.data.indexer.hf_dataset_indexer import HuggingFaceDatasetIndexer
+from uni2ts.transform import Identity, Transformation
 
 RANDOM_SEED = 42
 LOTSA_FRACTION = 0.1
@@ -39,11 +46,30 @@ def infer_frequency_from_timestamps(timestamps):
     else:
         return f"{seconds // 2592000}M"
 
-def unify_target_shape(example):
+def unify_target_shape(example): #FIXME: REMOUVE THIS FUNCTION
     if isinstance(example["target"][0], float):
         example["target"] = [[float(v)] for v in example["target"]]
     else:
         example["target"] = [[float(val) for val in row] for row in example["target"]]
+    return example
+
+def convert_to_tensor(sample): # TODO: delete this function
+    sample["target"] = torch.tensor(sample["target"], dtype=torch.float32)
+    return sample
+
+def ensure_target_format(example):
+    current_target = example["target"]
+
+    if not isinstance(current_target, list):
+        current_target = current_target.tolist() if hasattr(current_target, 'tolist') else list(current_target)
+
+    if not current_target or (isinstance(current_target[0], list) and all(isinstance(val, (int, float)) for val in current_target[0])):
+        example["target"] = [[float(v) for v in inner_list] for inner_list in current_target]
+    else:
+        if all(isinstance(val, (int, float)) for val in current_target):
+            example["target"] = [[float(v)] for v in current_target]
+        else:
+            raise ValueError(f"Unexpected target format for item_id {example.get('item_id', 'unknown')}: {current_target}")
     return example
 
 def load_data(yaml_path="data/datasets.yaml"):
@@ -89,6 +115,7 @@ def load_data(yaml_path="data/datasets.yaml"):
 
         elif group_name == "ett":
             for dataset_name in dataset_names:
+                break
                 print(f"Loading {dataset_name}...")
                 try:
                     ds = load_dataset(group_name, dataset_name, trust_remote_code=True)["train"]
@@ -109,7 +136,7 @@ def load_data(yaml_path="data/datasets.yaml"):
                     print(f"Failed to load {dataset_name} from {group_name}: {e}")
 
         elif group_name == "Salesforce/lotsa_data":
-            for dataset_name in dataset_names[3:4]:
+            for dataset_name in dataset_names[2:4]:
                 print(f"Loading {dataset_name}...")
                 try:
                     full_ds = load_dataset(group_name, dataset_name, trust_remote_code=True)["train"]
@@ -146,9 +173,34 @@ def load_data(yaml_path="data/datasets.yaml"):
             "target": Sequence(Sequence(Value("float32"))),
             "dataset": Value("string"),
         })
-
         full_train_dataset = Dataset.from_list(unified_examples, features=features)
-        return full_train_dataset
+
+        ############################# new code ##################################
+        indexed_data = []
+        for example in full_train_dataset:
+            ts_data: dict[str, MultivarTimeSeries] = {
+                "target": MultivarTimeSeries([
+                    UnivarTimeSeries(values=dim) for dim in example["target"]
+                ]),
+                "item_id": example["item_id"],
+                "start": example["start"],
+                "freq": example["freq"],
+                "dataset": example["dataset"]
+            }
+            indexed_data.append(ts_data)
+
+        indexer = HuggingFaceDatasetIndexer(indexed_data)
+
+        # TimeSeriesDataset
+        unified_dataset = TimeSeriesDataset(
+            indexer=indexer,
+            transform=Transformation(), # or Identity() if no transformation is needed
+            sample_time_series=SampleTimeSeriesType.NONE, # NONE/UNIFORM/PROPORTIONAL
+        )
+
+        return unified_dataset
+        #########################################################################
+
     else:
         raise ValueError("No datasets were loaded successfully.")
     

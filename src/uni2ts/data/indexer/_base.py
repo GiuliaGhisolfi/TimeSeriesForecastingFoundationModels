@@ -18,7 +18,7 @@ from collections.abc import Iterable, Sequence
 
 import numpy as np
 
-from moirai.common.typing import BatchedData, Data
+from uni2ts.common.typing import BatchedData, Data
 
 
 class Indexer(abc.ABC, Sequence):
