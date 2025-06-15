@@ -107,7 +107,7 @@ def load_data(yaml_path="data/datasets.yaml"):
                     ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
-                    ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
+                    #ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
 
                     datasets_list.append(ds)
                 except Exception as e:
@@ -129,7 +129,7 @@ def load_data(yaml_path="data/datasets.yaml"):
                     ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
-                    ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
+                    #ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
 
                     datasets_list.append(ds)
                 except Exception as e:
@@ -149,7 +149,7 @@ def load_data(yaml_path="data/datasets.yaml"):
                     ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
-                    ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
+                    #ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
 
                     datasets_list.append(ds)
                 except Exception as e:
@@ -179,9 +179,7 @@ def load_data(yaml_path="data/datasets.yaml"):
         indexed_data = []
         for example in full_train_dataset:
             ts_data: dict[str, MultivarTimeSeries] = {
-                "target": MultivarTimeSeries([
-                    UnivarTimeSeries(values=dim) for dim in example["target"]
-                ]),
+                "target": [np.array(dim, dtype=np.float32) for dim in example["target"]],
                 "item_id": example["item_id"],
                 "start": example["start"],
                 "freq": example["freq"],
@@ -189,7 +187,9 @@ def load_data(yaml_path="data/datasets.yaml"):
             }
             indexed_data.append(ts_data)
 
-        indexer = HuggingFaceDatasetIndexer(indexed_data)
+        indexed_data_hf = Dataset.from_list(indexed_data)
+        indexer = HuggingFaceDatasetIndexer(indexed_data_hf)
+        #indexer = HuggingFaceDatasetIndexer(indexed_data)
 
         # TimeSeriesDataset
         unified_dataset = TimeSeriesDataset(
@@ -203,6 +203,3 @@ def load_data(yaml_path="data/datasets.yaml"):
 
     else:
         raise ValueError("No datasets were loaded successfully.")
-    
-if __name__ == "__main__":
-    load_data()
