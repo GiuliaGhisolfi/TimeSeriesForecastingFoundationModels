@@ -5,7 +5,7 @@ import torch
 
 from moirai_utils.loader import CostumPadCollate
 from moirai_utils.moirai_utils import get_train_and_val_datasets, pad_tensor
-from uni2ts.data.loader import DataLoader, PadCollate
+from uni2ts.data.loader import DataLoader, PackCollate, PadCollate
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
@@ -56,8 +56,7 @@ def train():
     max_length = max(len(s["target"]) for s in train_dataset)
     max_length = max(max_length, max(len(s["target"]) for s in val_dataset))
 
-    collate_fn = PadCollate( # FIXME: Use PadCollate and fix dataset type in the dataloader (all keys)
-        # Custom collate function to handle padding
+    collate_fn = PadCollate( #or PackCollate
         seq_fields=["target"],
         target_field="target",
         pad_func_map={"target": pad_tensor},
