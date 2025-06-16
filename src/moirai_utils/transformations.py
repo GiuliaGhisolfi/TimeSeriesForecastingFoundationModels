@@ -23,16 +23,16 @@ class ToTorch(Transformation):
         # AddTimeIndex
         time_id_transform = AddTimeIndex(fields=("target",))
         data_entry = time_id_transform(data_entry)
-        data_entry["time_id"] = torch.tensor(data_entry["time_id"], dtype=torch.long)
+        data_entry["time_id"] = torch.tensor(data_entry["time_id"], dtype=torch.long).squeeze()
 
         # AddVariateIndex
         variate_id_transform = AddVariateIndex(fields=("target",), max_dim=data_entry["target"].shape[0])
         data_entry = variate_id_transform(data_entry)
-        data_entry["variate_id"] = torch.tensor(data_entry["variate_id"], dtype=torch.long)
+        data_entry["variate_id"] = torch.tensor(data_entry["variate_id"], dtype=torch.long).squeeze()
 
-        data_entry["prediction_mask"] = torch.ones_like(data_entry["target"], dtype=torch.bool)
+        data_entry["prediction_mask"] = torch.ones_like(data_entry["target"], dtype=torch.bool).squeeze()
 
-        data_entry["patch_size"] = torch.tensor(data_entry["target"].shape[1], dtype=torch.long)
+        data_entry["patch_size"] = torch.tensor(data_entry["target"].shape[1], dtype=torch.long).squeeze()
 
         return {
             "target": data_entry["target"],

@@ -79,6 +79,7 @@ def train():
         # Train
         model.train()
         train_loss_total = 0
+        n_batches = 0
 
         for batch in train_dataloader:
             optimizer.zero_grad()
@@ -86,8 +87,9 @@ def train():
             loss.backward()
             optimizer.step()
             train_loss_total += loss.item()
+            n_batches += 1
 
-        train_loss_avg = train_loss_total / len(train_dataloader)
+        train_loss_avg = train_loss_total / n_batches
         train_losses.append(train_loss_avg)
 
         print(f"Epoch {epoch}: Train Loss = {train_loss_avg:.4f}")
@@ -95,13 +97,15 @@ def train():
         # Validation
         model.eval()
         val_loss_total = 0
+        n_batches_val = 0
 
         with torch.no_grad():
             for batch in val_dataloader:
                 val_loss = model.validation_step(batch, batch_idx=0)
                 val_loss_total += val_loss.item()
+                n_batches_val += 1
         
-        val_loss_avg = val_loss_total / len(val_dataloader)
+        val_loss_avg = val_loss_total / n_batches_val
         val_losses.append(val_loss_avg)
 
         print(f"Epoch {epoch}: Val Loss = {val_loss_avg:.4f}")

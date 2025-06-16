@@ -36,7 +36,7 @@ def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=
 
     return train_dataset, val_dataset
 
-def to_timeseries_dataset(indexed_dataset, transform=ToTorch(), sample_time_series=SampleTimeSeriesType.NONE):
+def to_timeseries_dataset(indexed_dataset, transform=ToTorch(), sample_time_series=SampleTimeSeriesType.PROPORTIONAL):
     indexer = HuggingFaceDatasetIndexer(indexed_dataset)
     return TimeSeriesDataset(
         indexer=indexer,
