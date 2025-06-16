@@ -54,11 +54,16 @@ def train():
         print(f"Using {torch.cuda.device_count()} GPUs")
         model = torch.nn.DataParallel(model)
 
+    if isinstance(model, torch.nn.DataParallel):
+        hparams = model.module._hparams
+    else:
+        hparams = model._hparams
+
     optimizer = torch.optim.AdamW(
         model.parameters(),
-        lr=model._hparams['lr'],
-        betas=(model._hparams['beta1'], model._hparams['beta2']),
-        weight_decay=model._hparams['weight_decay']
+        lr=hparams['lr'],
+        betas=(hparams['beta1'], hparams['beta2']),
+        weight_decay=hparams['weight_decay']
         )
 
     # Load train and validation data
@@ -84,6 +89,8 @@ def train():
     val_losses = []
     train_losses = []
 
+    model_to_use = model.module if hasattr(model, "module") else model
+
     for epoch in range(EPOCHS):
         print(f"Epoch {epoch + 1}/{EPOCHS}")
 
@@ -92,10 +99,10 @@ def train():
         train_loss_total = 0
         n_batches = 0
 
-        for batch in train_dataloader:
+        for batch_idx, batch in enumerate(train_dataloader):
             batch = move_batch_to_device(batch, DEVICE_MAP)
             optimizer.zero_grad()
-            loss = model.training_step(batch, batch_idx=0)
+            loss = model_to_use.training_step(batch, batch_idx=batch_idx)
             loss.backward()
             optimizer.step()
             train_loss_total += loss.item()
@@ -111,9 +118,9 @@ def train():
         n_batches_val = 0
 
         with torch.no_grad():
-            for batch in val_dataloader:
+            for batch_idx, batch in enumerate(val_dataloader):
                 batch = move_batch_to_device(batch, DEVICE_MAP)
-                val_loss = model.validation_step(batch, batch_idx=0)
+                val_loss = model_to_use.validation_step(batch, batch_idx=batch_idx)
                 val_loss_total += val_loss.item()
                 n_batches_val += 1
         
@@ -125,8 +132,13 @@ def train():
         if val_loss_avg < best_val_loss:
             best_val_loss = val_loss_avg
             patience_counter = 0
+
             # Save best model
-            torch.save({'state_dict': model.module.state_dict()}, f"checkpoints/{MODEL_NAME}_best.ckpt")
+            if isinstance(model, torch.nn.DataParallel):
+                state_dict = model.module.state_dict()
+            else:
+                state_dict = model.state_dict()
+            torch.save({'state_dict': state_dict}, f"checkpoints/{MODEL_NAME}_best.ckpt")
             print("Saved best model.")
         else:
             patience_counter += 1
@@ -135,7 +147,11 @@ def train():
                 break
 
         # Save checkpoint per epoch
-        torch.save({'state_dict': model.module.state_dict()}, f"checkpoints/{MODEL_NAME}_epoch_{epoch}.ckpt")
+        if isinstance(model, torch.nn.DataParallel):
+            state_dict = model.module.state_dict()
+        else:
+            state_dict = model.state_dict()
+        torch.save({'state_dict': state_dict}, f"checkpoints/{MODEL_NAME}_epoch_{epoch}.ckpt")
 
         print(f"Saved checkpoint for epoch {epoch}.")
 
