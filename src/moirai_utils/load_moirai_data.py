@@ -6,7 +6,7 @@ from datasets import Dataset, Features, Sequence, Value, load_dataset
 from uni2ts.common.typing import MultivarTimeSeries
 
 RANDOM_SEED = 42
-LOTSA_FRACTION = 0.1
+LOTSA_FRACTION = 0.05
 
 FREQ_MAP_ETT = {
     "m1": "15T",
@@ -59,7 +59,6 @@ def load_data(yaml_path="data/datasets.yaml"):
 
         if group_name in ["autogluon/chronos_datasets", "autogluon/chronos_datasets_extra"]:
             for dataset_name in dataset_names:
-                break
                 print(f"Loading {dataset_name}...")
                 try:
                     ds = load_dataset(group_name, dataset_name, split="train", trust_remote_code=True)
@@ -82,7 +81,6 @@ def load_data(yaml_path="data/datasets.yaml"):
                     ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
-                    #ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
 
                     datasets_list.append(ds)
                 except Exception as e:
@@ -103,7 +101,6 @@ def load_data(yaml_path="data/datasets.yaml"):
                     ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
-                    #ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
 
                     datasets_list.append(ds)
                 except Exception as e:
@@ -111,7 +108,6 @@ def load_data(yaml_path="data/datasets.yaml"):
 
         elif group_name == "Salesforce/lotsa_data":
             for dataset_name in dataset_names:
-                break
                 print(f"Loading {dataset_name}...")
                 try:
                     full_ds = load_dataset(group_name, dataset_name, trust_remote_code=True)["train"]
@@ -124,7 +120,6 @@ def load_data(yaml_path="data/datasets.yaml"):
                     ds = ds.remove_columns([col for col in ds.column_names if col not in ["item_id", "start", "freq", "target"]])
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
-                    #ds = ds.select_columns(['item_id', 'start', 'freq', 'target', 'dataset'])
 
                     datasets_list.append(ds)
                 except Exception as e:

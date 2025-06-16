@@ -14,7 +14,7 @@ from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "Salesforce/moirai-1.0-R-large"
 MODEL_NAME = "moirai_small"
-DEVICE_MAP = "cpu"
+DEVICE_MAP = "cuda" if torch.cuda.is_available() else "cpu"
 
 EPOCHS = 10
 TEST_SIZE = 0.2
