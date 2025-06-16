@@ -50,6 +50,10 @@ def train():
         log_on_step=False,
     ).to(DEVICE_MAP)
 
+    if torch.cuda.device_count() > 1:
+        print(f"Using {torch.cuda.device_count()} GPUs")
+        model = torch.nn.DataParallel(model)
+
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=model._hparams['lr'],
@@ -122,7 +126,7 @@ def train():
             best_val_loss = val_loss_avg
             patience_counter = 0
             # Save best model
-            torch.save({'state_dict': model.state_dict()}, f"checkpoints/{MODEL_NAME}_best.ckpt")
+            torch.save({'state_dict': model.module.state_dict()}, f"checkpoints/{MODEL_NAME}_best.ckpt")
             print("Saved best model.")
         else:
             patience_counter += 1
@@ -131,7 +135,8 @@ def train():
                 break
 
         # Save checkpoint per epoch
-        torch.save({'state_dict': model.state_dict()}, f"checkpoints/{MODEL_NAME}_epoch_{epoch}.ckpt")
+        torch.save({'state_dict': model.module.state_dict()}, f"checkpoints/{MODEL_NAME}_epoch_{epoch}.ckpt")
+
         print(f"Saved checkpoint for epoch {epoch}.")
 
     # Save validation and training losses
