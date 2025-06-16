@@ -58,7 +58,7 @@ def load_data(yaml_path="data/datasets.yaml"):
         print(f"\nLoading group: {group_name}")
 
         if group_name in ["autogluon/chronos_datasets", "autogluon/chronos_datasets_extra"]:
-            for dataset_name in dataset_names[:1]:
+            for dataset_name in dataset_names:
                 break
                 print(f"Loading {dataset_name}...")
                 try:
@@ -89,7 +89,7 @@ def load_data(yaml_path="data/datasets.yaml"):
                     print(f"Failed to load {dataset_name} from {group_name}: {e}")
 
         elif group_name == "ett":
-            for dataset_name in dataset_names[:1]:
+            for dataset_name in dataset_names:
                 print(f"Loading {dataset_name}...")
                 try:
                     ds = load_dataset(group_name, dataset_name, trust_remote_code=True)["train"]
@@ -110,7 +110,8 @@ def load_data(yaml_path="data/datasets.yaml"):
                     print(f"Failed to load {dataset_name} from {group_name}: {e}")
 
         elif group_name == "Salesforce/lotsa_data":
-            for dataset_name in dataset_names[2:3]:
+            for dataset_name in dataset_names:
+                break
                 print(f"Loading {dataset_name}...")
                 try:
                     full_ds = load_dataset(group_name, dataset_name, trust_remote_code=True)["train"]

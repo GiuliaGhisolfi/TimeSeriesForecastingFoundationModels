@@ -55,6 +55,8 @@ def get_train_and_val_datasets(dataset_path="data/moirai_dataset", yaml_path="da
         print("Train and validation datasets do not exist. Loading from YAML and splitting...")
         # Load the full dataset from YAML
         indexed_dataset = load_data(yaml_path=yaml_path)
+        # and save it to disk
+        save_train_and_val_datasets(yaml_path, dataset_path)
 
     # Stratified split
     train_dataset, val_dataset = stratified_split(
