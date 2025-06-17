@@ -113,7 +113,7 @@ def load_data(yaml_path="data/datasets.yaml"):
             for dataset_name in dataset_names:
                 print(f"Loading {dataset_name}...")
                 try:
-                    ds = load_dataset(group_name, dataset_name, split="train")
+                    ds = load_dataset(group_name, dataset_name, split="train", trust_remote_code=True)
 
                     # Adapt to LOTSA structure
                     freq_value = FREQ_MAP_ETT.get(dataset_name)
