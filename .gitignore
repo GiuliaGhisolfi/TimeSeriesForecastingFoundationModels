@@ -2,3 +2,6 @@ __pycache__
 data/moirai_dataset
 data/moirai_dataset_old
 checkpoints
+
+data/splitted_moirai_dataset
+splitted_moirai_dataset_lotsa1
