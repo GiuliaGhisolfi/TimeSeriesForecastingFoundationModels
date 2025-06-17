@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 import yaml
@@ -39,6 +41,23 @@ def infer_frequency_from_timestamps(timestamps):
         return f"{seconds // 604800}W"
     else:
         return f"{seconds // 2592000}M"
+    
+def save_dataset_to_disk(dataset, path="data/splitted_moirai_dataset"):
+    dataset_name = dataset["dataset"][0]
+    save_path = f"{path}/{dataset_name.replace('/', '_')}"
+
+    os.makedirs(save_path, exist_ok=True)
+    dataset.save_to_disk(save_path)
+
+    print(f"Dataset {dataset_name} saved to {save_path}")
+
+def load_dataset_from_disk(dataset_name, path="data/splitted_moirai_dataset"):
+    save_path = f"{path}/{dataset_name.replace('/', '_')}"
+    
+    if os.path.exists(save_path):
+        return Dataset.load_from_disk(save_path)
+    else:
+        raise FileNotFoundError(f"Dataset {dataset_name} not found in {save_path}")
 
 def unify_target_shape(example):
     if isinstance(example["target"][0], float):
@@ -49,6 +68,7 @@ def unify_target_shape(example):
 
 def load_data(yaml_path="data/datasets.yaml"):
     datasets_list = []
+    dataset_name_list = []
 
     # Load dataset names from YAML
     with open(yaml_path, "r") as f:
@@ -82,7 +102,10 @@ def load_data(yaml_path="data/datasets.yaml"):
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
 
-                    datasets_list.append(ds)
+                    #datasets_list.append(ds)
+                    save_dataset_to_disk(ds)
+                    dataset_name_list.append(ds["dataset"][0].replace("/", "_"))
+
                 except Exception as e:
                     print(f"Failed to load {dataset_name} from {group_name}: {e}")
 
@@ -90,7 +113,7 @@ def load_data(yaml_path="data/datasets.yaml"):
             for dataset_name in dataset_names:
                 print(f"Loading {dataset_name}...")
                 try:
-                    ds = load_dataset(group_name, dataset_name, trust_remote_code=True)["train"]
+                    ds = load_dataset(group_name, dataset_name, split="train")
 
                     # Adapt to LOTSA structure
                     freq_value = FREQ_MAP_ETT.get(dataset_name)
@@ -102,7 +125,10 @@ def load_data(yaml_path="data/datasets.yaml"):
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
 
-                    datasets_list.append(ds)
+                    #datasets_list.append(ds)
+                    save_dataset_to_disk(ds)
+                    dataset_name_list.append(ds["dataset"][0].replace("/", "_"))
+
                 except Exception as e:
                     print(f"Failed to load {dataset_name} from {group_name}: {e}")
 
@@ -110,7 +136,7 @@ def load_data(yaml_path="data/datasets.yaml"):
             for dataset_name in dataset_names:
                 print(f"Loading {dataset_name}...")
                 try:
-                    full_ds = load_dataset(group_name, dataset_name, trust_remote_code=True)["train"]
+                    full_ds = load_dataset(group_name, dataset_name, split="train", trust_remote_code=True)
                     num_samples = int(LOTSA_FRACTION * len(full_ds))
                     ds = full_ds.shuffle(seed=RANDOM_SEED).select(range(num_samples))
 
@@ -121,7 +147,10 @@ def load_data(yaml_path="data/datasets.yaml"):
                     # Dataset name
                     ds = ds.add_column("dataset", [group_name + "/" + dataset_name] * len(ds))
 
-                    datasets_list.append(ds)
+                    #datasets_list.append(ds)
+                    save_dataset_to_disk(ds)
+                    dataset_name_list.append(ds["dataset"][0].replace("/", "_"))
+
                 except Exception as e:
                     print(f"Failed to load {dataset_name} from {group_name}: {e}")
 
@@ -130,7 +159,11 @@ def load_data(yaml_path="data/datasets.yaml"):
             continue
 
     # Concatenate all datasets
-    if datasets_list:
+    if dataset_name_list:
+        for ds_name in dataset_name_list:
+            ds = load_dataset_from_disk(ds_name)
+            datasets_list.append(ds)
+
         indexed_data = []
         for ds in datasets_list:
             ds = ds.map(unify_target_shape)
