@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 import torch
 from torch.utils._pytree import tree_map
@@ -88,11 +89,13 @@ def train():
     patience_counter = 0
     val_losses = []
     train_losses = []
+    times = []
 
     model_to_use = model.module if hasattr(model, "module") else model
 
     for epoch in range(EPOCHS):
         print(f"Epoch {epoch + 1}/{EPOCHS}")
+        start_time = time.time()
 
         # Train
         model.train()
@@ -127,6 +130,11 @@ def train():
         val_loss_avg = val_loss_total / n_batches_val
         val_losses.append(val_loss_avg)
         print(f"Epoch {epoch}: Val Loss = {val_loss_avg:.4f}")
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        times.append(elapsed_time)
+        print(f"Epoch {epoch + 1} completed in {elapsed_time:.2f} seconds.")
 
         # Early stopping
         if val_loss_avg < best_val_loss:
@@ -163,6 +171,9 @@ def train():
     with open(f"results/{MODEL_NAME}_val_losses.json", "w") as f:
         json.dump(val_losses, f)
     print("Saved training and validation losses.")
+    with open(f"results/{MODEL_NAME}_times.json", "w") as f:
+        json.dump(times, f)
+    print("Saved training times.")
 
 
 if __name__ == "__main__":
