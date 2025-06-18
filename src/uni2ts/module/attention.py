@@ -16,7 +16,7 @@
 import math
 from collections.abc import Callable
 from functools import partial
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 import torch.nn.functional as F
@@ -34,10 +34,10 @@ def native_scaled_dot_product_attention(
     query: Float[torch.Tensor, "*batch group hpg q_len dim"],
     key: Float[torch.Tensor, "*batch group hpg kv_len dim"],
     value: Float[torch.Tensor, "*batch group hpg kv_len dim"],
-    attn_mask: Optional[
-        Bool[torch.Tensor, "*batch #group #hpg q_len kv_len"]
-        | Float[torch.Tensor, "*batch #group #hpg q_len kv_len"]
-    ] = None,
+    attn_mask: Optional[Union[
+        Bool[torch.Tensor, "*batch #group #hpg q_len kv_len"],
+        Float[torch.Tensor, "*batch #group #hpg q_len kv_len"]
+    ]] = None,
     dropout_p: float = 0.0,
     scale: Optional[float] = None,
 ):
@@ -62,7 +62,7 @@ class GroupedQueryAttention(nn.Module):
         num_heads: int,
         num_groups: int,
         bias: bool = True,
-        norm_layer: Optional[type[nn.Module] | partial[nn.Module]] = nn.LayerNorm,
+        norm_layer: Optional[Union[type[nn.Module], partial[nn.Module]]] = nn.LayerNorm,
         softmax_scale: Optional[float] = None,
         attn_dropout_p: float = 0.0,
         var_attn_bias: Optional[Callable[[], AttentionBias]] = None,
@@ -166,10 +166,10 @@ class GroupedQueryAttention(nn.Module):
         kv_var_id: Optional[Int[torch.Tensor, "*batch 1 1 kv_len"]] = None,
         query_time_id: Optional[Int[torch.Tensor, "*batch 1 1 q_len"]] = None,
         kv_time_id: Optional[Int[torch.Tensor, "*batch 1 1 kv_len"]] = None,
-    ) -> Optional[
-        Bool[torch.Tensor, "*batch #group #hpg q_len kv_len"]
-        | Float[torch.Tensor, "*batch #group #hpg q_len kv_len"]
-    ]:
+    ) -> Optional[Union[
+        Bool[torch.Tensor, "*batch #group #hpg q_len kv_len"],
+        Float[torch.Tensor, "*batch #group #hpg q_len kv_len"]
+    ]]:
         if attn_mask is not None:
             attn_mask = rearrange(
                 attn_mask,
@@ -311,7 +311,7 @@ class MultiQueryAttention(GroupedQueryAttention):
         dim: int,
         num_heads: int,
         bias: bool = True,
-        norm_layer: Optional[type[nn.Module] | partial[nn.Module]] = nn.LayerNorm,
+        norm_layer: Optional[type[Union[nn.Module, partial[nn.Module]]]] = nn.LayerNorm,
         softmax_scale: Optional[float] = None,
         attn_dropout_p: float = 0.0,
         var_attn_bias: Optional[Callable[[], AttentionBias]] = None,
@@ -340,7 +340,7 @@ class MultiHeadAttention(GroupedQueryAttention):
         dim: int,
         num_heads: int,
         bias: bool = True,
-        norm_layer: Optional[type[nn.Module] | partial[nn.Module]] = nn.LayerNorm,
+        norm_layer: Optional[type [Union[nn.Module, partial[nn.Module]]] ] = nn.LayerNorm,
         softmax_scale: Optional[float] = None,
         attn_dropout_p: float = 0.0,
         var_attn_bias: Optional[Callable[[], AttentionBias]] = None,

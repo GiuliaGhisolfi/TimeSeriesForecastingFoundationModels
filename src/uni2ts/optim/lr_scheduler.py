@@ -15,7 +15,7 @@
 import math
 from enum import Enum
 from functools import partial
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from torch.optim import Optimizer
@@ -391,7 +391,7 @@ TYPE_TO_SCHEDULER_FUNCTION = {
 
 
 def get_scheduler(
-    name: str | SchedulerType,
+    name: Union[str, SchedulerType],
     optimizer: Optimizer,
     num_warmup_steps: Optional[int] = None,
     num_training_steps: Optional[int] = None,

@@ -15,6 +15,7 @@
 
 import abc
 from collections.abc import Iterable, Sequence
+from typing import Union
 
 import numpy as np
 
@@ -34,7 +35,7 @@ class Indexer(abc.ABC, Sequence):
         """
         self.uniform = uniform
 
-    def check_index(self, idx: int | slice | Iterable[int]):
+    def check_index(self, idx: Union[int, slice, Iterable[int]]):
         """
         Check the validity of a given index.
 
@@ -63,8 +64,8 @@ class Indexer(abc.ABC, Sequence):
             raise NotImplementedError(f"Unable to index on type: {type(idx)}")
 
     def __getitem__(
-        self, idx: int | slice | Iterable[int]
-    ) -> dict[str, Data | BatchedData]:
+        self, idx: Union[int, slice, Iterable[int]]
+    ) -> dict[str, Data, BatchedData]:
         """
         Retrive the data from the underlying storage in dictionary format.
 

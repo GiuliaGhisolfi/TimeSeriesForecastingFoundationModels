@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 from jaxtyping import Num
@@ -31,7 +31,7 @@ class ImputationMethod:
 
 @dataclass(frozen=True)
 class DummyValueImputation(ImputationMethod):
-    value: int | float | complex = 0.0
+    value: Union[int, float, complex] = 0.0
 
     def __call__(
         self, x: Num[np.ndarray, "length *dim"]
@@ -42,7 +42,7 @@ class DummyValueImputation(ImputationMethod):
 
 @dataclass(frozen=True)
 class LastValueImputation(ImputationMethod):
-    value: int | float | complex = 0.0
+    value: Union[int, float, complex] = 0.0
 
     def __call__(
         self, x: Num[np.ndarray, "length *dim"]
@@ -65,7 +65,7 @@ class LastValueImputation(ImputationMethod):
 class CausalMeanImputation(ImputationMethod):
     # TODO: implement causal mean imputation
     def __call__(
-        self, x: Num[np.ndarray, "length *dim"], value: int | float | complex = 0.0
+        self, x: Num[np.ndarray, "length *dim"], value: Union[int, float, complex] = 0.0
     ) -> Num[np.ndarray, "length *dim"]: ...
 
 

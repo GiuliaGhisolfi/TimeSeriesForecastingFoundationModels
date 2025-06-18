@@ -16,7 +16,7 @@
 import math
 from contextlib import contextmanager
 from copy import deepcopy
-from typing import Any, Generator, Optional
+from typing import Any, Generator, Optional, Union
 
 import lightning as L
 import numpy as np
@@ -75,7 +75,7 @@ class MoiraiForecast(L.LightningModule):
         context_length: int,
         module_kwargs: Optional[dict[str, Any]] = None,
         module: Optional[MoiraiModule] = None,
-        patch_size: int | str = "auto",
+        patch_size: Union[int, str] = "auto",
         num_samples: int = 100,
     ):
         assert (module is not None) or (
@@ -94,7 +94,7 @@ class MoiraiForecast(L.LightningModule):
         feat_dynamic_real_dim: Optional[int] = None,
         past_feat_dynamic_real_dim: Optional[int] = None,
         context_length: Optional[int] = None,
-        patch_size: Optional[int | str] = None,
+        patch_size: Optional[Union[int, str]] = None,
         num_samples: Optional[int] = None,
     ) -> Generator["MoiraiForecast", None, None]:
         kwargs = {

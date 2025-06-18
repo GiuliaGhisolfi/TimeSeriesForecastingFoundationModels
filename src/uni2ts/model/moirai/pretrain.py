@@ -15,7 +15,7 @@
 
 from collections import defaultdict
 from collections.abc import Callable, Sequence
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import lightning as L
 import numpy as np
@@ -74,7 +74,7 @@ class MoiraiPretrain(L.LightningModule):
         beta1: float = 0.9,
         beta2: float = 0.98,
         loss_func: PackedDistributionLoss = PackedNLLLoss(),
-        val_metric: Optional[PackedLoss | list[PackedLoss]] = None,
+        val_metric: Optional[Union[PackedLoss, list[PackedLoss]]] = None,
         lr: float = 1e-3,
         weight_decay: float = 1e-2,
         log_on_step: bool = False,
@@ -289,7 +289,7 @@ class MoiraiPretrain(L.LightningModule):
         # validate that we considered every parameter
         param_dict = {pn: p for pn, p in self.named_parameters() if p.requires_grad}
         inter_params = decay & no_decay
-        union_params = decay | no_decay
+        union_params = decay or no_decay
         assert (
             len(inter_params) == 0
         ), f"parameters {str(inter_params)} made it into both decay/no_decay sets!"

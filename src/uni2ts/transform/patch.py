@@ -16,7 +16,7 @@
 import abc
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -78,7 +78,7 @@ class DefaultPatchSizeConstraints(PatchSizeConstraints):
 class GetPatchSize(Transformation):
     min_time_patches: int
     target_field: str = "target"
-    patch_sizes: tuple[int, ...] | list[int] | range = (8, 16, 32, 64, 128)
+    patch_sizes: Union[tuple[int, ...], list[int], range] = (8, 16, 32, 64, 128)
     patch_size_constraints: PatchSizeConstraints = DefaultPatchSizeConstraints()
     offset: bool = True
 
@@ -125,7 +125,7 @@ class Patchify(MapFuncMixin, Transformation):
     max_patch_size: int
     fields: tuple[str, ...] = ("target",)
     optional_fields: tuple[str, ...] = ("past_feat_dynamic_real",)
-    pad_value: int | float = 0
+    pad_value: Union[int, float] = 0
 
     def __call__(self, data_entry: dict[str, Any]) -> dict[str, Any]:
         patch_size = data_entry["patch_size"]

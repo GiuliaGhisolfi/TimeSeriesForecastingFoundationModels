@@ -13,15 +13,16 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import torch
-from jaxtyping import Float, PyTree
+from jaxtyping import Float
 from torch.distributions import Laplace
 from torch.nn import functional as F
 
 from ._base import DistributionOutput
 
+PyTree = Any
 
 class LaplaceOutput(DistributionOutput):
     distr_cls = Laplace
@@ -30,9 +31,7 @@ class LaplaceOutput(DistributionOutput):
     @property
     def domain_map(
         self,
-    ) -> PyTree[
-        Callable[[Float[torch.Tensor, "*batch 1"]], Float[torch.Tensor, "*batch"]], "T"
-    ]:
+    ) -> PyTree:
         return dict(loc=self._loc, scale=self._scale)
 
     @staticmethod
@@ -55,9 +54,7 @@ class LaplaceFixedScaleOutput(DistributionOutput):
     @property
     def domain_map(
         self,
-    ) -> PyTree[
-        Callable[[Float[torch.Tensor, "*batch 1"]], Float[torch.Tensor, "*batch"]], "T"
-    ]:
+    ) -> PyTree:
         return dict(loc=self._loc)
 
     @staticmethod
@@ -66,7 +63,7 @@ class LaplaceFixedScaleOutput(DistributionOutput):
 
     def _distribution(
         self,
-        distr_params: PyTree[Float[torch.Tensor, "*batch 1"], "T"],
+        distr_params: PyTree,
         validate_args: Optional[bool] = None,
     ) -> Laplace:
         loc = distr_params["loc"]

@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 
@@ -86,7 +86,7 @@ class CollectFuncMixin:
         data_entry: dict[str, Any],
         fields: tuple[str, ...],
         optional_fields: tuple[str, ...] = (),
-    ) -> list[Any] | dict[str, Any]:
+    ) -> Union[list[Any], dict[str, Any]]:
         if not hasattr(self, "collection_type"):
             raise NotImplementedError(
                 f"{self.__class__.__name__} has no attribute 'collection_type', "

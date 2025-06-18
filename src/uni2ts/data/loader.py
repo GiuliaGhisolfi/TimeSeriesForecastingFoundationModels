@@ -17,7 +17,7 @@ import itertools
 from collections import defaultdict, deque
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Union
 
 import numpy as np
 import torch
@@ -42,7 +42,7 @@ class Collate:
     target_field: str = "target"
 
     def __post_init__(self):
-        self.pad_func_map = defaultdict(self._default_pad_func) | self.pad_func_map
+        self.pad_func_map = Union[defaultdict(self._default_pad_func), self.pad_func_map]
 
     @staticmethod
     def _default_pad_func() -> Callable[[Sequence[int], np.dtype], np.ndarray]:
@@ -69,7 +69,7 @@ class PadCollate(Collate):
 
         sample_id = self.get_sample_id(batch)
         padded_batch = self.pad_samples(batch)
-        merged_batch = padded_batch | dict(sample_id=sample_id)
+        merged_batch = Union[padded_batch, dict(sample_id=sample_id)]
         return merged_batch
 
     def pad_samples(self, batch: list[Sample]) -> BatchedSample:
@@ -117,9 +117,9 @@ class PackCollate(Collate):
 
         packed_batch, bin_spaces = self.first_fit_decreasing_bin_packing(batch)
         sample_id = self.get_sample_id(packed_batch, bin_spaces)
-        merged_batch = self.merge_batch(packed_batch, bin_spaces) | dict(
+        merged_batch = Union[self.merge_batch(packed_batch, bin_spaces), dict(
             sample_id=sample_id
-        )
+        )]
         return merged_batch
 
     def first_fit_decreasing_bin_packing(
@@ -271,14 +271,14 @@ class BatchedSampleQueue:
                 ]
             ), "batch must have the same schema as the first batch"
 
-    def append(self, batch: SliceableBatchedSample | BatchedSample):
+    def append(self, batch: Union[SliceableBatchedSample, BatchedSample]):
         """Appends a batch to the end of the queue."""
         if not isinstance(batch, SliceableBatchedSample):
             batch = SliceableBatchedSample(batch)
         self._check_schema(batch)
         self.container.append(batch)
 
-    def appendleft(self, batch: SliceableBatchedSample | BatchedSample):
+    def appendleft(self, batch: Union[SliceableBatchedSample, BatchedSample]):
         """Appends a batch to the start of the queue."""
         if not isinstance(batch, SliceableBatchedSample):
             batch = SliceableBatchedSample(batch)

@@ -36,7 +36,7 @@ from uni2ts.module.ts_embed import MultiInSizeLinear
 
 def encode_distr_output(
     distr_output: DistributionOutput,
-) -> dict[str, str | float | int]:
+) -> dict[str, str, float, int]:
     """Serialization function for DistributionOutput"""
 
     def _encode(val):
@@ -51,7 +51,7 @@ def encode_distr_output(
     return _encode(distr_output)
 
 
-def decode_distr_output(config: dict[str, str | float | int]) -> DistributionOutput:
+def decode_distr_output(config: dict[str, str, float, int]) -> DistributionOutput:
     """Deserialization function for DistributionOutput"""
     return instantiate(config, _convert_="all")
 
@@ -71,7 +71,7 @@ class MoiraiModule(
         distr_output: DistributionOutput,
         d_model: int,
         num_layers: int,
-        patch_sizes: tuple[int, ...],  # tuple[int, ...] | list[int]
+        patch_sizes: tuple[int, ...],  # tuple[int, ...], list[int]
         max_seq_len: int,
         attn_dropout_p: float,
         dropout_p: float,

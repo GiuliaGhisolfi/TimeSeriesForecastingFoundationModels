@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import torch
@@ -92,7 +92,7 @@ def fixed_size(
 def sized_mean(
     value: Float[torch.Tensor, "*batch max_size"],
     sizes: Optional[Int[torch.Tensor, "*batch"]],
-    dim: Optional[int | tuple[int, ...]] = None,
+    dim: Optional[Union[int, tuple[int, ...]]] = None,
     keepdim: bool = False,
     size_keepdim: bool = False,
     correction: int = 0,
@@ -110,7 +110,7 @@ def sized_mean(
 def masked_mean(
     value: Float[torch.Tensor, "..."],
     mask: Bool[torch.Tensor, "..."],
-    dim: Optional[int | tuple[int, ...]] = None,
+    dim: Optional[Union[int, tuple[int, ...]]] = None,
     keepdim: bool = False,
     correction: int = 0,
 ) -> Float[torch.Tensor, "..."]:

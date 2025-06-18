@@ -13,17 +13,18 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Callable, Optional
+from typing import Any, Callable, Optional, Union
 
 import torch
-from jaxtyping import Float, PyTree
+from jaxtyping import Float
 from torch.distributions import Distribution, Gamma, constraints
-from torch.distributions.utils import broadcast_all, lazy_property, logits_to_probs
+from torch.distributions.utils import (broadcast_all, lazy_property,
+                                       logits_to_probs)
 from torch.nn import functional as F
 
 from ._base import DistributionOutput
 
-
+PyTree = Any
 class NegativeBinomial(Distribution):
     arg_constraints = {
         "total_count": constraints.positive,
@@ -34,8 +35,8 @@ class NegativeBinomial(Distribution):
 
     def __init__(
         self,
-        total_count: float | torch.Tensor,
-        logits: float | torch.Tensor,
+        total_count: Union[float, torch.Tensor],
+        logits: Union[float, torch.Tensor],
         validate_args: Optional[bool] = None,
     ):
         (
@@ -104,9 +105,7 @@ class NegativeBinomialOutput(DistributionOutput):
     @property
     def domain_map(
         self,
-    ) -> PyTree[
-        Callable[[Float[torch.Tensor, "*batch 1"]], Float[torch.Tensor, "*batch"]], "T"
-    ]:
+    ) -> PyTree:
         return dict(total_count=self._total_count, logits=self._logits)
 
     @staticmethod
