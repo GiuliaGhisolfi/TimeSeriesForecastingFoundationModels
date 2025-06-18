@@ -4,6 +4,7 @@ import random
 import torch
 from datasets import Dataset
 
+from compose_moirai_dataset import concatenate_moirai_datasets
 from moirai_utils.load_moirai_data import load_data
 from moirai_utils.transformations import ToTorch
 from uni2ts.data.dataset import SampleTimeSeriesType, TimeSeriesDataset
@@ -51,6 +52,10 @@ def get_train_and_val_datasets(dataset_path="data/moirai_dataset", yaml_path="da
         print("Train and validation datasets already exist. Loading from disk...")
         # Load train and validation data
         indexed_dataset = Dataset.load_from_disk(dataset_path)
+    elif os.path.exits("data\splitted_moirai_dataset"):
+        print("Splitted datasets already exist. Loading from disk...")
+        indexed_dataset = concatenate_moirai_datasets()
+        
     else:
         print("Train and validation datasets do not exist. Loading from YAML and splitting...")
         # Load the full dataset from YAML

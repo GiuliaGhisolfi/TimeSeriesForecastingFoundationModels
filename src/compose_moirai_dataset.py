@@ -181,6 +181,10 @@ def concatenate_moirai_datasets():
 
     print("Creating indexed dataset...")
     indexed_dataset = Dataset.from_list(indexed_data, features=features)
+    return indexed_dataset
+
+def save_concatenate_moirai_datasets():
+    indexed_dataset = concatenate_moirai_datasets()
 
     # Save datasets to disk
     dataset_path="data/moirai_dataset"
@@ -191,5 +195,5 @@ def concatenate_moirai_datasets():
     print(f"Dataset saved to {dataset_path}")
 
 if __name__ == "__main__":
-    concatenate_moirai_datasets()
+    save_concatenate_moirai_datasets()
     print("Moirai datasets concatenated and saved successfully.")
