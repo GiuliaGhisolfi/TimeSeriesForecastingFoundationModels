@@ -1,7 +1,7 @@
-import json
 import os
 import time
 
+import orjson
 import torch
 from torch.utils._pytree import tree_map
 
@@ -167,12 +167,12 @@ def train():
     os.makedirs("results", exist_ok=True)
 
     with open(f"results/{MODEL_NAME}_train_losses.json", "w") as f:
-        json.dump(train_losses, f)
+        orjson.dump(train_losses, f)
     with open(f"results/{MODEL_NAME}_val_losses.json", "w") as f:
-        json.dump(val_losses, f)
+        orjson.dump(val_losses, f)
     print("Saved training and validation losses.")
     with open(f"results/{MODEL_NAME}_times.json", "w") as f:
-        json.dump(times, f)
+        orjson.dump(times, f)
     print("Saved training times.")
 
 
