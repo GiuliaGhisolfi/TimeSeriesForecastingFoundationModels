@@ -1,3 +1,4 @@
+import gc
 import os
 
 import numpy as np
@@ -157,6 +158,9 @@ def load_data(yaml_path="data/datasets.yaml"):
         else:
             print(f"Unknown group: {group_name}, skipping...")
             continue
+
+        # clean up memory
+        gc.collect()
 
     # Concatenate all datasets
     if dataset_name_list:
