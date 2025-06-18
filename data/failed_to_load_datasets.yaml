@@ -32,16 +32,6 @@ Salesforce/lotsa_data :
     #- buildings_900k #Failed to load
     #- cif_2016_6
     #- cmip6
-    - cmip6_1890
-    - cmip6_1895
-    - cmip6_1900
-    - cmip6_1905
-    - cmip6_1910
-    - cmip6_1915
-    - cmip6_1920
-    - cmip6_1925
-    - cmip6_1930
-    - cmip6_1935
     - cmip6_1940
     - cmip6_1945
     - cmip6_1950
@@ -62,20 +52,6 @@ Salesforce/lotsa_data :
     #- elecdemand
     #- elf
     #- era5
-    - era5_1991
-    - era5_1992
-    - era5_1993
-    - era5_1994
-    - era5_1995
-    - era5_1996
-    - era5_1997
-    - era5_1998
-    - era5_1999
-    - era5_2000
-    - era5_2001
-    - era5_2002
-    - era5_2003
-    - era5_2004
     - era5_2005
     - era5_2006
     - era5_2007
