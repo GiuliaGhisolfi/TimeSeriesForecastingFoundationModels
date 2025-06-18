@@ -26,11 +26,11 @@ PATIENCE = 3 # Early stopping patience
 def move_batch_to_device(batch, device):
     return tree_map(lambda x: x.to(device) if isinstance(x, torch.Tensor) else x, batch)
 
-def train():
-    print(f"Using device: {DEVICE_MAP}")
+def train(device_map=DEVICE_MAP):
+    print(f"Using device: {device_map}")
 
     # Load model from checkpoint
-    pretrained_module = MoiraiModule.from_pretrained(MODEL_PATH).to(DEVICE_MAP)
+    pretrained_module = MoiraiModule.from_pretrained(MODEL_PATH).to(device_map)
 
     model = MoiraiFinetune(
         module=pretrained_module,
@@ -49,7 +49,7 @@ def train():
         lr=1e-3,
         weight_decay=1e-2,
         log_on_step=False,
-    ).to(DEVICE_MAP)
+    ).to(device_map)
 
     if torch.cuda.device_count() > 1:
         print(f"Using {torch.cuda.device_count()} GPUs")
@@ -103,7 +103,7 @@ def train():
         n_batches = 0
 
         for batch_idx, batch in enumerate(train_dataloader):
-            batch = move_batch_to_device(batch, DEVICE_MAP)
+            batch = move_batch_to_device(batch, device_map)
             optimizer.zero_grad()
             loss = model_to_use.training_step(batch, batch_idx=batch_idx)
             loss.backward()
@@ -122,7 +122,7 @@ def train():
 
         with torch.no_grad():
             for batch_idx, batch in enumerate(val_dataloader):
-                batch = move_batch_to_device(batch, DEVICE_MAP)
+                batch = move_batch_to_device(batch, device_map)
                 val_loss = model_to_use.validation_step(batch, batch_idx=batch_idx)
                 val_loss_total += val_loss.item()
                 n_batches_val += 1
