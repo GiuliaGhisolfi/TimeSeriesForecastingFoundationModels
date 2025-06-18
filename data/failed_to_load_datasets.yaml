@@ -32,8 +32,6 @@ Salesforce/lotsa_data :
     #- buildings_900k #Failed to load
     #- cif_2016_6
     #- cmip6
-    - cmip6_1880
-    - cmip6_1885
     - cmip6_1890
     - cmip6_1895
     - cmip6_1900

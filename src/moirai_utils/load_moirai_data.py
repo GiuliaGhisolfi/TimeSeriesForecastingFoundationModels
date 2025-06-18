@@ -1,5 +1,6 @@
 import gc
 import os
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -164,6 +165,7 @@ def load_data(yaml_path="data/datasets.yaml"):
         # Clean up memory
         del ds
         gc.collect()
+        shutil.rmtree('/root/.cache/huggingface/', ignore_errors=True)
 
     # Concatenate all datasets
     if dataset_name_list:
