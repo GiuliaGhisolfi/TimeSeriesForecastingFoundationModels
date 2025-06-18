@@ -152,6 +152,8 @@ def load_data(yaml_path="data/datasets.yaml"):
                     save_dataset_to_disk(ds)
                     dataset_name_list.append(ds["dataset"][0].replace("/", "_"))
 
+                    del full_ds  # Clean up memory
+
                 except Exception as e:
                     print(f"Failed to load {dataset_name} from {group_name}: {e}")
 
@@ -159,7 +161,8 @@ def load_data(yaml_path="data/datasets.yaml"):
             print(f"Unknown group: {group_name}, skipping...")
             continue
 
-        # clean up memory
+        # Clean up memory
+        del ds
         gc.collect()
 
     # Concatenate all datasets
