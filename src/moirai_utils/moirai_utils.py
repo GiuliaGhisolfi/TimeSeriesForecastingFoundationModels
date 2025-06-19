@@ -52,7 +52,8 @@ def get_train_and_val_datasets(dataset_path="data/moirai_dataset", yaml_path="da
         print("Train and validation datasets already exist. Loading from disk...")
         # Load train and validation data
         indexed_dataset = Dataset.load_from_disk(dataset_path)
-    elif os.path.exits("data\splitted_moirai_dataset"):
+    
+    elif os.path.exists("data/splitted_moirai_dataset"):
         print("Splitted datasets already exist. Loading from disk...")
         indexed_dataset = concatenate_moirai_datasets()
         
