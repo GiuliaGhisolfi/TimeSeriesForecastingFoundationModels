@@ -17,6 +17,7 @@ def pad_tensor(shape, dtype=torch.float32):
         return torch.zeros(shape, dtype=dtype)
 
 def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED):
+    print(f"Stratified split with test size: {test_size}, seed: {seed}")
     groups = {}
     for row in dataset:
         key = row[stratify_col]
@@ -25,7 +26,9 @@ def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=
     train_splits, val_splits = [], []
     rng = random.Random(seed)
 
+    print(f"Number of groups: {len(groups)}")
     for group_rows in groups.values():
+        print(f"Processing group: {group_rows[0][stratify_col]} with {len(group_rows)} rows")
         rng.shuffle(group_rows)
         n_val = int(len(group_rows) * test_size)
         val_splits.extend(group_rows[:n_val])
@@ -34,6 +37,7 @@ def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=
     #return train_splits, val_splits
     train_dataset = Dataset.from_list(train_splits, features=dataset.features)
     val_dataset = Dataset.from_list(val_splits, features=dataset.features)
+    print(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
 
     return train_dataset, val_dataset
 

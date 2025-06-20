@@ -26,28 +26,46 @@ PATIENCE = 3 # Early stopping patience
 def move_batch_to_device(batch, device):
     return tree_map(lambda x: x.to(device) if isinstance(x, torch.Tensor) else x, batch)
 
-def train(device_map=DEVICE_MAP):
-    print(f"Using device: {device_map}")
-
-    # Load model from checkpoint
-    pretrained_module = MoiraiModule.from_pretrained(MODEL_PATH).to(device_map)
-
-    model = MoiraiFinetune(
-        module=pretrained_module,
+def train(
+        model_name=MODEL_NAME,
+        model_path=MODEL_PATH,
+        device_map=DEVICE_MAP,
+        epochs=EPOCHS,
+        patience=PATIENCE,
+        test_size=TEST_SIZE,
+        batch_size=2,
         min_patches=16,
         min_mask_ratio=0.2,
         max_mask_ratio=0.5,
         max_dim=1024,
+        beta1=0.9,
+        beta2=0.98,
+        loss_func=PackedNLLLoss(),
+        val_metric=PackedNLLLoss(),
+        learning_rate=1e-3,
+        weight_decay=1e-2
+        ):
+    print(f"Using device: {device_map}")
+
+    # Load model from checkpoint
+    pretrained_module = MoiraiModule.from_pretrained(model_path).to(device_map)
+
+    model = MoiraiFinetune(
+        module=pretrained_module,
+        min_patches=min_patches, #16,
+        min_mask_ratio=min_mask_ratio, #0.2,
+        max_mask_ratio=max_mask_ratio, #0.5,
+        max_dim=max_dim, #1024,
         num_training_steps=10000,
         num_warmup_steps=1000,
         module_kwargs=None,
         num_samples=100,
-        beta1=0.9,
-        beta2=0.98,
-        loss_func=PackedNLLLoss(),
-        val_metric=None,
-        lr=1e-3,
-        weight_decay=1e-2,
+        beta1=beta1, #0.9,
+        beta2=beta2, #0.98,
+        loss_func=loss_func,
+        val_metric=val_metric,
+        lr=learning_rate,
+        weight_decay=weight_decay,
         log_on_step=False,
     ).to(device_map)
 
@@ -68,7 +86,7 @@ def train(device_map=DEVICE_MAP):
         )
 
     # Load train and validation data
-    train_dataset, val_dataset = get_train_and_val_datasets(test_size=TEST_SIZE)
+    train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)
 
     max_length = max(len(s["target"]) for s in train_dataset)
     max_length = max(max_length, max(len(s["target"]) for s in val_dataset))
@@ -80,8 +98,8 @@ def train(device_map=DEVICE_MAP):
         max_length=max_length,
     )
 
-    train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True, collate_fn=collate_fn)
-    val_dataloader = DataLoader(val_dataset, batch_size=2, shuffle=False, collate_fn=collate_fn)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
     os.makedirs("checkpoints", exist_ok=True)
 
@@ -93,8 +111,8 @@ def train(device_map=DEVICE_MAP):
 
     model_to_use = model.module if hasattr(model, "module") else model
 
-    for epoch in range(EPOCHS):
-        print(f"Epoch {epoch + 1}/{EPOCHS}")
+    for epoch in range(epochs):
+        print(f"Epoch {epoch + 1}/{epochs}")
         start_time = time.time()
 
         # Train
@@ -146,11 +164,11 @@ def train(device_map=DEVICE_MAP):
                 state_dict = model.module.state_dict()
             else:
                 state_dict = model.state_dict()
-            torch.save({'state_dict': state_dict}, f"checkpoints/{MODEL_NAME}_best.ckpt")
+            torch.save({'state_dict': state_dict}, f"checkpoints/{model_name}_best.ckpt")
             print("Saved best model.")
         else:
             patience_counter += 1
-            if patience_counter >= PATIENCE:
+            if patience_counter >= patience:
                 print("Early stopping triggered.")
                 break
 
@@ -159,19 +177,19 @@ def train(device_map=DEVICE_MAP):
             state_dict = model.module.state_dict()
         else:
             state_dict = model.state_dict()
-        torch.save({'state_dict': state_dict}, f"checkpoints/{MODEL_NAME}_epoch_{epoch}.ckpt")
+        torch.save({'state_dict': state_dict}, f"checkpoints/{model_name}_epoch_{epoch}.ckpt")
 
         print(f"Saved checkpoint for epoch {epoch}.")
 
     # Save validation and training losses
     os.makedirs("results", exist_ok=True)
 
-    with open(f"results/{MODEL_NAME}_train_losses.json", "w") as f:
+    with open(f"results/{model_name}_train_losses.json", "w") as f:
         orjson.dump(train_losses, f)
-    with open(f"results/{MODEL_NAME}_val_losses.json", "w") as f:
+    with open(f"results/{model_name}_val_losses.json", "w") as f:
         orjson.dump(val_losses, f)
     print("Saved training and validation losses.")
-    with open(f"results/{MODEL_NAME}_times.json", "w") as f:
+    with open(f"results/{model_name}_times.json", "w") as f:
         orjson.dump(times, f)
     print("Saved training times.")
 
