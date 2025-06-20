@@ -30,10 +30,14 @@ def train(
         model_name=MODEL_NAME,
         model_path=MODEL_PATH,
         device_map=DEVICE_MAP,
+        # Training parameters
         epochs=EPOCHS,
         patience=PATIENCE,
+        # Data parameters
+        data_from_splitted_files=True,  # If True, use pre-split train/val datasets
         test_size=TEST_SIZE,
-        batch_size=2,
+        batch_size=64,
+        # Defaults for MoiraiFinetune
         min_patches=16,
         min_mask_ratio=0.2,
         max_mask_ratio=0.5,
@@ -86,7 +90,14 @@ def train(
         )
 
     # Load train and validation data
-    train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)
+    if data_from_splitted_files and os.path.exists("data/train_dataset.pkl") and os.path.exists("data/val_dataset.pkl"):
+        with open("train_dataset.pkl", "rb") as f:
+            train_dataset = pickle.load(f)
+        
+        with open("val_dataset.pkl", "rb") as f:
+            val_dataset = pickle.load(f)
+    else:
+        train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)
 
     max_length = max(len(s["target"]) for s in train_dataset)
     max_length = max(max_length, max(len(s["target"]) for s in val_dataset))
