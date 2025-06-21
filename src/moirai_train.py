@@ -3,6 +3,7 @@ import pickle
 import time
 
 import orjson
+import pyarrow.compute as pc
 import torch
 from torch.utils._pytree import tree_map
 
@@ -92,18 +93,35 @@ def train(
 
     # Load train and validation data
     if data_from_splitted_files and os.path.exists("data/train_dataset.pkl") and os.path.exists("data/val_dataset.pkl"):
-        with open("train_dataset.pkl", "rb") as f:
+        with open("data/train_dataset.pkl", "rb") as f:
             train_dataset = pickle.load(f)
         
-        with open("val_dataset.pkl", "rb") as f:
+        with open("data/val_dataset.pkl", "rb") as f:
             val_dataset = pickle.load(f)
     else:
         train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)
 
-    max_length = max(len(s["target"]) for s in train_dataset)
-    max_length = max(max_length, max(len(s["target"]) for s in val_dataset))
+    # Find maximum sequence length for padding
+    if train_dataset.indexer[0]["target"].ndim > 1:
+        lengths = pc.list_value_length(
+            pc.list_flatten(pc.list_slice(train_dataset.indexer.dataset.data.column("target"), 0, 1))
+        )
+    else:
+        lengths = pc.list_value_length(train_dataset.indexer.dataset.data.column("target"))
+    lengths = lengths.to_numpy()
+    max_length = lengths.max() if lengths.size > 0 else 0
 
-    collate_fn = PadCollate( #or PackCollate
+    if val_dataset.indexer[0]["target"].ndim > 1:
+        lengths = pc.list_value_length(
+            pc.list_flatten(pc.list_slice(val_dataset.indexer.dataset.data.column("target"), 0, 1))
+        )
+    else:
+        lengths = pc.list_value_length(val_dataset.indexer.dataset.data.column("target"))
+    lengths = lengths.to_numpy()
+    max_length = max(max_length, lengths.max() if lengths.size > 0 else 0)
+
+    # Create collate function for padding sequences
+    collate_fn = PadCollate(
         seq_fields=["target"],
         target_field="target",
         pad_func_map={"target": pad_tensor},
