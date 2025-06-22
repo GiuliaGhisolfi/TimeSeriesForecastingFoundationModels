@@ -101,46 +101,6 @@ def train(
             val_dataset = pickle.load(f)
     else:
         train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)
-    # TODO: REMOVE THIS
-    ############################################################################################################
-    """from datasets import Dataset, Features, Sequence, Value
-
-    from moirai_utils.moirai_utils import stratified_split
-
-    dataset = Dataset.load_from_disk("data/splitted_moirai_dataset/autogluon_chronos_datasets_mexico_city_bikes")
-
-    def unify_target_shape(example):
-        if isinstance(example["target"][0], float):
-            example["target"] = [[float(v)] for v in example["target"]]
-        else:
-            example["target"] = [[float(val) for val in row] for row in example["target"]]
-        return example
-    dataset = dataset.map(unify_target_shape)
-
-    indexed_data = []
-    for example in dataset:
-        ts_data = {
-            "target": [np.array(dim, dtype=np.float32) for dim in example["target"]],
-            "item_id": example["item_id"],
-            "start": example["start"],
-            "freq": example["freq"],
-            "dataset": example["dataset"]
-        }
-        indexed_data.append(ts_data)
-
-    features = Features({
-        "item_id": Value("string"),
-        "start": Value("timestamp[ns]"),
-        "freq": Value("string"),
-        "target": Sequence(Sequence(Value("float32"))),
-        "dataset": Value("string"),
-    })
-
-    print("Creating indexed dataset...")
-    indexed_dataset = Dataset.from_list(indexed_data, features=features)
-
-    train_dataset, val_dataset = stratified_split(indexed_dataset)"""
-    #########################################################################################
 
     # Find maximum sequence length for padding
     lengths = np.asarray([len(sample) for sample in train_dataset.indexer.dataset.data["target"]])
@@ -148,9 +108,6 @@ def train(
 
     lengths = np.asarray([len(sample) for sample in val_dataset.indexer.dataset.data["target"]])
     max_length = max(max_length, lengths.max() if lengths.size > 0 else 0)
-
-    #max_length = max(len(s["target"]) for s in train_dataset) # TODO: REMOVE THIS
-    #max_length = max(max_length, max(len(s["target"]) for s in val_dataset)) # TODO: REMOVE THIS
 
     # Create collate function for padding sequences
     collate_fn = PadCollate(
