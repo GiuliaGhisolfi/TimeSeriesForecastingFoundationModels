@@ -8,47 +8,36 @@ from uni2ts.data.loader import PackCollate, PadCollate
 
 
 class CostumPadCollate(PadCollate):
-    def  __call__(self, batch: list[Sample]) -> BatchedSample:
-        # Custom padding logic if needed
-        return super().__call__(batch)
-    
+
     def pad_samples(self, batch: list[Sample]) -> BatchedSample:
-        processed_batch = []
-        for i, sample in enumerate(batch):
-            padded_sample = {}
+        max_feat_dim = max(
+            sample[self.target_field].shape[1]
+            if sample[self.target_field].ndim > 1
+            else 1
+            for sample in batch
+        )
+
+        for sample in batch:
             length = len(sample[self.target_field])
 
-            for key, value in sample.items():
-                if key in self.seq_fields: # target
-                    # Pad sequence
-                    padded_sample[key] = torch.cat([
-                        default_convert(value),
-                        default_convert(
-                            self.pad_func_map.get(key, pad_tensor)(
-                                (self.max_length - length,) + value.shape[1:],
-                                value.dtype,
-                            )
-                        ),
-                    ])
-                else:
-                    if isinstance(value, torch.Tensor):
-                        padded_sample[key] = value
-                    elif isinstance(value, (int, float)):
-                        padded_sample[key] = torch.tensor(value)
-                    elif isinstance(value, str):
-                        codes = [ord(c) for c in value]
-                        padded_sample[key] = torch.tensor(codes, dtype=torch.int32)
-                    elif isinstance(value, np.str_):
-                        s = value.item()
-                        codes = [ord(c) for c in s]
-                        padded_sample[key] = torch.tensor(codes, dtype=torch.int32)
-                    elif isinstance(value, np.ndarray): # start
-                        ts = int(value.astype('datetime64[s]').astype(int))
-                        padded_sample[key] = torch.tensor(ts)
-                    elif isinstance(value, np.integer) or isinstance(value, np.floating):
-                        padded_sample[key] = torch.tensor(value.item())
-                    else:
-                        print(f"Ignoring key '{key}' of unsupported type: {type(value)}")
-            processed_batch.append(padded_sample)
+            for key in self.seq_fields:
+                seq = sample[key]
 
-        return default_collate(processed_batch)
+                # Se [L] → [L, 1]
+                if seq.ndim == 1:
+                    seq = seq.unsqueeze(1)
+
+                # Se [L, d] → padding a [L, max_feat_dim]
+                feat_dim = seq.shape[1]
+                if feat_dim < max_feat_dim:
+                    pad_feat = torch.zeros((length, max_feat_dim - feat_dim), dtype=seq.dtype)
+                    seq = torch.cat([seq, pad_feat], dim=1)
+
+                # Padding a max_length in lunghezza
+                if length < self.max_length:
+                    pad_seq = torch.zeros((self.max_length - length, max_feat_dim), dtype=seq.dtype)
+                    seq = torch.cat([seq, pad_seq], dim=0)
+
+                sample[key] = seq
+
+        return default_collate(batch)

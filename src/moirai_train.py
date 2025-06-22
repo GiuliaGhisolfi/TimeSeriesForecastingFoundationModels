@@ -110,7 +110,7 @@ def train(
     max_length = max(max_length, lengths.max() if lengths.size > 0 else 0)
 
     # Create collate function for padding sequences
-    collate_fn = PadCollate(
+    collate_fn = CostumPadCollate( #PadCollate
         seq_fields=["target"],
         target_field="target",
         pad_func_map={"target": pad_tensor},
