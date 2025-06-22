@@ -39,7 +39,7 @@ def train(
         # Data parameters
         data_from_splitted_files=True,  # If True, use pre-split train/val datasets
         test_size=TEST_SIZE,
-        batch_size=64,
+        batch_size=16,
         # Defaults for MoiraiFinetune
         min_patches=16,
         min_mask_ratio=0.2,
@@ -110,15 +110,21 @@ def train(
     max_length = max(max_length, lengths.max() if lengths.size > 0 else 0)
 
     # Create collate function for padding sequences
-    collate_fn = CostumPadCollate( #PadCollate
-        seq_fields=["target"],
+    collate_fn = PadCollate( #CostumPadCollate
+        seq_fields=["target", "observed_mask", "time_id", "variate_id", "prediction_mask"], # ["target"],
         target_field="target",
         pad_func_map={"target": pad_tensor},
         max_length=max_length,
     )
 
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+    train_dataloader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn,
+        num_workers=0, persistent_workers=False
+        )
+    val_dataloader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn,
+        num_workers=0, persistent_workers=False
+        )
 
     os.makedirs("checkpoints", exist_ok=True)
 
@@ -140,6 +146,10 @@ def train(
         n_batches = 0
 
         for batch_idx, batch in enumerate(train_dataloader):
+            print(f"Batch {batch_idx}: {[v.shape for v in batch.values()]}")
+            if batch_idx == 2: #TODO: remove
+                break
+
             batch = move_batch_to_device(batch, device_map)
             optimizer.zero_grad()
             loss = model_to_use.training_step(batch, batch_idx=batch_idx)
