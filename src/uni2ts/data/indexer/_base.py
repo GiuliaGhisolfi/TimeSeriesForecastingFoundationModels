@@ -65,7 +65,7 @@ class Indexer(abc.ABC, Sequence):
 
     def __getitem__(
         self, idx: Union[int, slice, Iterable[int]]
-    ) -> dict[str, Data, BatchedData]:
+    ):# -> dict[str, Data, BatchedData]: #dict[str, Union[Data, BatchedData]]:
         """
         Retrive the data from the underlying storage in dictionary format.
 
@@ -82,18 +82,19 @@ class Indexer(abc.ABC, Sequence):
             item = self._getitem_iterable(idx)
         else:
             raise NotImplementedError(f"Unable to index on type: {type(idx)}")
-
-        return {k: v for k, v in item.items()}
+        
+        #return {k: v for d in item for k, v in d.items()} # FIXME: cambiare quando il dataset è stato salvato giusto
+        return {k: v for k, v in item.items()} # original code
 
     def _getitem_slice(self, idx: slice) -> dict[str, BatchedData]:
         indices = list(range(len(self))[idx])
         return self._getitem_iterable(indices)
 
     @abc.abstractmethod
-    def _getitem_int(self, idx: int) -> dict[str, Data]: ...
+    def _getitem_int(self, idx: int): ... # -> dict[str, Data]: ...
 
     @abc.abstractmethod
-    def _getitem_iterable(self, idx: Iterable[int]) -> dict[str, BatchedData]: ...
+    def _getitem_iterable(self, idx: Iterable[int]): ... # -> dict[str, BatchedData]: ...
 
     def get_uniform_probabilities(self) -> np.ndarray:
         """

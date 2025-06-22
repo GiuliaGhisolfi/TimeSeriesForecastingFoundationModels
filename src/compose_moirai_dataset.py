@@ -162,7 +162,7 @@ def concatenate_moirai_datasets():
         print(f"Processing dataset {i + 1}/{len(datasets_list)}")
         ds = ds.map(unify_target_shape)
         for example in ds:
-            ts_data: dict[str, MultivarTimeSeries] = {
+            ts_data = {
                 "target": [np.array(dim, dtype=np.float32) for dim in example["target"]],
                 "item_id": example["item_id"],
                 "start": example["start"],

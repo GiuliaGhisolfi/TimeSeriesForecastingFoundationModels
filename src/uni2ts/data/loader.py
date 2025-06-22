@@ -42,7 +42,9 @@ class Collate:
     target_field: str = "target"
 
     def __post_init__(self):
-        self.pad_func_map = Union[defaultdict(self._default_pad_func), self.pad_func_map]
+        #self.pad_func_map = Union[defaultdict(self._default_pad_func), self.pad_func_map] # original code
+        if self.pad_func_map is None: # TODO: my code
+            self.pad_func_map = defaultdict(self._default_pad_func)
 
     @staticmethod
     def _default_pad_func() -> Callable[[Sequence[int], np.dtype], np.ndarray]:

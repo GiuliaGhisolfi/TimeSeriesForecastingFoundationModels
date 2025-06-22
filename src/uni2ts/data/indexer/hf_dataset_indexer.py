@@ -61,7 +61,7 @@ class HuggingFaceDatasetIndexer(Indexer):
         seqs = {
             col: self._pa_column_to_numpy(pa_subtable, col)[0] for col in self.seq_cols
         }
-        return dict[non_seqs, seqs]
+        return {**non_seqs, **seqs} #dict[non_seqs, seqs]
 
     def _getitem_iterable(self, idx: Iterable[int]) -> dict[str, BatchedData]:
         non_seqs = self.dataset[idx]
@@ -69,7 +69,7 @@ class HuggingFaceDatasetIndexer(Indexer):
         seqs = {
             col: self._pa_column_to_numpy(pa_subtable, col) for col in self.seq_cols
         }
-        return dict[non_seqs, seqs]
+        return {**non_seqs, **seqs} #dict[non_seqs, seqs]
 
     def _getitem_slice(self, idx: slice) -> dict[str, BatchedData]:
         non_seqs = self.dataset[idx]
@@ -77,7 +77,7 @@ class HuggingFaceDatasetIndexer(Indexer):
         seqs = {
             col: self._pa_column_to_numpy(pa_subtable, col) for col in self.seq_cols
         }
-        return dict[non_seqs, seqs]
+        return {**non_seqs, **seqs} #dict[non_seqs, seqs]
 
     def _pa_column_to_numpy(
         self, pa_table: pa.Table, column_name: str
