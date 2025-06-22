@@ -5,8 +5,6 @@ from torch.utils.data import default_collate, default_convert
 from moirai_utils.moirai_utils import pad_tensor
 from uni2ts.common.typing import BatchedSample, Sample
 from uni2ts.data.loader import PackCollate, PadCollate
-from uni2ts.transform import (AddObservedMask, AddTimeIndex, AddVariateIndex,
-                              Transformation)
 
 
 class CostumPadCollate(PadCollate):
@@ -55,24 +53,5 @@ class CostumPadCollate(PadCollate):
                     ],
                     dim = -1
                 )
-
-            """# AddObservedMask
-            observed_mask_transform = AddObservedMask(fields=("target",))
-            sample = observed_mask_transform(sample)
-            sample["observed_mask"] = torch.tensor(sample["observed_mask"], dtype=torch.bool)
-
-            # AddTimeIndex
-            time_id_transform = AddTimeIndex(fields=("target",))
-            sample = time_id_transform(sample)
-            sample["time_id"] = torch.tensor(sample["time_id"], dtype=torch.long).squeeze()
-
-            # AddVariateIndex
-            variate_id_transform = AddVariateIndex(fields=("target",), max_dim=sample["target"].shape[0])
-            sample = variate_id_transform(sample)
-            sample["variate_id"] = torch.tensor(sample["variate_id"], dtype=torch.long).squeeze()
-
-            sample["prediction_mask"] = torch.ones_like(sample["target"], dtype=torch.bool).squeeze()
-
-            sample["patch_size"] = torch.tensor(sample["target"].shape[1], dtype=torch.long).squeeze()"""
 
         return default_collate(batch)
