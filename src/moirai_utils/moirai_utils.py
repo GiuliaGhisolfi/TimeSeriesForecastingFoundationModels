@@ -14,7 +14,13 @@ RANDOM_SEED = 42
 TEST_SIZE = 0.2
 
 def pad_tensor(shape, dtype=torch.float32):
-        return torch.zeros(shape, dtype=dtype)
+    return torch.zeros(shape, dtype=dtype)
+
+def pad_bool_tensor(shape, dtype=torch.bool):
+    return torch.zeros(shape, dtype=dtype) # False
+
+def pad_int_tensor(shape, pad_value=-1, dtype=torch.long):
+    return torch.full(shape, pad_value, dtype=dtype)
 
 def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED):
     print(f"Stratified split with test size: {test_size}, seed: {seed}")

@@ -9,7 +9,9 @@ import torch
 from torch.utils._pytree import tree_map
 
 from moirai_utils.loader import CostumPadCollate
-from moirai_utils.moirai_utils import get_train_and_val_datasets, pad_tensor
+from moirai_utils.moirai_utils import (get_train_and_val_datasets,
+                                       pad_bool_tensor, pad_int_tensor,
+                                       pad_tensor)
 from uni2ts.data.loader import DataLoader, PackCollate, PadCollate
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
@@ -110,10 +112,16 @@ def train(
     max_length = max(max_length, lengths.max() if lengths.size > 0 else 0)
 
     # Create collate function for padding sequences
-    collate_fn = PadCollate( #CostumPadCollate
-        seq_fields=["target", "observed_mask", "time_id", "variate_id", "prediction_mask"], # ["target"],
+    collate_fn = CostumPadCollate( # PadCollate
+        seq_fields= ["target", "observed_mask", "time_id", "variate_id", "prediction_mask"], #["target"],
         target_field="target",
-        pad_func_map={"target": pad_tensor},
+        pad_func_map={
+            "target": pad_tensor,
+            "observed_mask": pad_bool_tensor,
+            "time_id": pad_int_tensor,
+            "variate_id": pad_int_tensor,
+            "prediction_mask": pad_bool_tensor,
+            },
         max_length=max_length,
     )
 
