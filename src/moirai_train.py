@@ -41,7 +41,7 @@ def train(
         # Data parameters
         data_from_splitted_files=True,  # If True, use pre-split train/val datasets
         test_size=TEST_SIZE,
-        batch_size=2,
+        batch_size=1,
         # Defaults for MoiraiFinetune
         min_patches=16,
         min_mask_ratio=0.2,
@@ -142,7 +142,7 @@ def train(
     train_losses = []
     times = []
 
-    model_to_use = model.module if hasattr(model, "module") else model
+    model_to_use = model #model.module if hasattr(model, "module") else model #TODO
 
     for epoch in range(epochs):
         print(f"Epoch {epoch + 1}/{epochs}")
@@ -154,10 +154,6 @@ def train(
         n_batches = 0
 
         for batch_idx, batch in enumerate(train_dataloader):
-            print(f"Batch {batch_idx}: {[v.shape for v in batch.values()]}")
-            if batch_idx == 2: #TODO: remove
-                break
-
             batch = move_batch_to_device(batch, device_map)
             optimizer.zero_grad()
             loss = model_to_use.training_step(batch, batch_idx=batch_idx)
