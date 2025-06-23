@@ -27,16 +27,14 @@ from weakref import proxy
 
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import ModelCheckpoint
-from lightning.pytorch.utilities.rank_zero import (
-    WarningCache,
-    rank_zero_info,
-    rank_zero_warn,
-)
+from lightning.pytorch.utilities.rank_zero import (WarningCache,
+                                                   rank_zero_info,
+                                                   rank_zero_warn)
 
 log = logging.getLogger(__name__)
 warning_cache = WarningCache()
 
-_PATH = Union[str, Path]
+_PATH = Union[str, Path] # FIXME (?)
 
 
 class HuggingFaceCheckpoint(ModelCheckpoint):

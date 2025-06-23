@@ -71,7 +71,7 @@ class PadCollate(Collate):
 
         sample_id = self.get_sample_id(batch)
         padded_batch = self.pad_samples(batch)
-        merged_batch = Union[padded_batch, dict(sample_id=sample_id)]
+        merged_batch = {**padded_batch, "sample_id": sample_id} # Union[padded_batch, dict(sample_id=sample_id)]
         return merged_batch
 
     def pad_samples(self, batch: list[Sample]) -> BatchedSample:
@@ -119,9 +119,13 @@ class PackCollate(Collate):
 
         packed_batch, bin_spaces = self.first_fit_decreasing_bin_packing(batch)
         sample_id = self.get_sample_id(packed_batch, bin_spaces)
-        merged_batch = Union[self.merge_batch(packed_batch, bin_spaces), dict(
+        """merged_batch = Union[self.merge_batch(packed_batch, bin_spaces), dict(
             sample_id=sample_id
-        )]
+        )]"""
+        merged_batch = {
+            **self.merge_batch(packed_batch, bin_spaces),
+            "sample_id": sample_id
+        }
         return merged_batch
 
     def first_fit_decreasing_bin_packing(

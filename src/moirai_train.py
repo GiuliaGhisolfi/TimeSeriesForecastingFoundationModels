@@ -41,7 +41,7 @@ def train(
         # Data parameters
         data_from_splitted_files=True,  # If True, use pre-split train/val datasets
         test_size=TEST_SIZE,
-        batch_size=16,
+        batch_size=2,
         # Defaults for MoiraiFinetune
         min_patches=16,
         min_mask_ratio=0.2,
