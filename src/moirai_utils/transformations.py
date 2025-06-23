@@ -12,7 +12,7 @@ class ToTorch(Transformation):
         # AddObservedMask
         observed_mask_transform = AddObservedMask(fields=("target",))
         data_entry = observed_mask_transform(data_entry)
-        # data_entry["observed_mask"] = torch.tensor(data_entry["observed_mask"], dtype=torch.bool) #FIXME: era giusto questo
+        # data_entry["observed_mask"] = torch.tensor(data_entry["observed_mask"], dtype=torch.bool) #FIXME: idk
         data_entry["observed_mask"] = torch.tensor(data_entry["observed_mask"], dtype=torch.bool).squeeze() # ho usato questo
 
         # Convert target to torch tensor

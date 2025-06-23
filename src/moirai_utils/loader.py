@@ -25,15 +25,10 @@ class CostumPadCollate(PadCollate):
             length = len(sample[self.target_field])
             feat_dim = sample[self.target_field].shape[1]
 
-            # Fix "observed_mask" shape
-            #FIXME: se viene salvato dataset nel formato corretto togliere questa riga
-            #sample["observed_mask"] = sample["observed_mask"].unsqueeze(-1)
-
             for key in self.seq_fields:
                 if sample[key].dim() == 1:
                     sample[key] = sample[key].unsqueeze(-1)
 
-                print(key, sample[key].shape)
                 # Padding ts length
                 sample[key] = torch.cat(
                     [
