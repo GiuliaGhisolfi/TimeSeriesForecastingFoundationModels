@@ -1,31 +1,29 @@
 import os
 import pickle
-import time
 
 import numpy as np
-import orjson
-import pyarrow.compute as pc
 import torch
+from lightning.pytorch import Trainer
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+from lightning.pytorch.loggers import CSVLogger
 from torch.utils._pytree import tree_map
 
+from moirai_utils.callbacks import EpochStatsLogger
 from moirai_utils.loader import CostumPadCollate
 from moirai_utils.moirai_utils import (get_train_and_val_datasets,
                                        pad_bool_tensor, pad_int_tensor,
                                        pad_tensor)
-from uni2ts.data.loader import DataLoader, PackCollate, PadCollate
+from uni2ts.data.loader import DataLoader
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
-#from torch.utils.data import DataLoader as TorchDataLoader
-
-
-MODEL_PATH = "Salesforce/moirai-1.0-R-small" # "Salesforce/moirai-1.0-R-base", "Salesforce/moirai-1.0-R-large"
+MODEL_PATH = "Salesforce/moirai-1.0-R-small"
 MODEL_NAME = "moirai_small"
 DEVICE_MAP = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 EPOCHS = 10
 TEST_SIZE = 0.2
-PATIENCE = 3 # Early stopping patience
+PATIENCE = 3
 
 
 def move_batch_to_device(batch, device):
@@ -35,14 +33,11 @@ def train(
         model_name=MODEL_NAME,
         model_path=MODEL_PATH,
         device_map=DEVICE_MAP,
-        # Training parameters
         epochs=EPOCHS,
         patience=PATIENCE,
-        # Data parameters
-        data_from_splitted_files=True,  # If True, use pre-split train/val datasets
+        data_from_splitted_files=True,
         test_size=TEST_SIZE,
-        batch_size=1,
-        # Defaults for MoiraiFinetune
+        batch_size=64,
         min_patches=16,
         min_mask_ratio=0.2,
         max_mask_ratio=0.5,
@@ -56,64 +51,81 @@ def train(
         ):
     print(f"Using device: {device_map}")
 
-    # Load model from checkpoint
+    # Model
     pretrained_module = MoiraiModule.from_pretrained(model_path).to(device_map)
 
     model = MoiraiFinetune(
         module=pretrained_module,
-        min_patches=min_patches, #16,
-        min_mask_ratio=min_mask_ratio, #0.2,
-        max_mask_ratio=max_mask_ratio, #0.5,
-        max_dim=max_dim, #1024,
+        min_patches=min_patches,
+        min_mask_ratio=min_mask_ratio,
+        max_mask_ratio=max_mask_ratio,
+        max_dim=max_dim,
         num_training_steps=10000,
         num_warmup_steps=1000,
         module_kwargs=None,
         num_samples=100,
-        beta1=beta1, #0.9,
-        beta2=beta2, #0.98,
+        beta1=beta1,
+        beta2=beta2,
         loss_func=loss_func,
         val_metric=val_metric,
         lr=learning_rate,
         weight_decay=weight_decay,
         log_on_step=False,
-    ).to(device_map)
+    )
 
     if torch.cuda.device_count() > 1:
         print(f"Using {torch.cuda.device_count()} GPUs")
-        model = torch.nn.DataParallel(model)
 
-    if isinstance(model, torch.nn.DataParallel):
-        hparams = model.module._hparams
-    else:
-        hparams = model._hparams
+    # Trainer
+    logger = CSVLogger("logs", name=model_name)
+    checkpoint_all = ModelCheckpoint(
+        dirpath="checkpoints",
+        filename=f"{model_name}_epoch_{{epoch}}",
+        every_n_epochs=1,
+        save_top_k=-1
+    )
+    checkpoint_best = ModelCheckpoint(
+        dirpath="checkpoints",
+        filename=f"{model_name}_best",
+        monitor="val/PackedNLLLoss",
+        mode="min",
+        save_top_k=1
+    )
+    early_stopping = EarlyStopping(
+        monitor="val/PackedNLLLoss",
+        mode="min",
+        patience=patience
+    )
 
-    optimizer = torch.optim.AdamW(
-        model.parameters(),
-        lr=hparams['lr'],
-        betas=(hparams['beta1'], hparams['beta2']),
-        weight_decay=hparams['weight_decay']
-        )
+    logger = CSVLogger("logs", name=model_name)
+    stats_logger = EpochStatsLogger(model_name)
 
-    # Load train and validation data
+    trainer = Trainer(
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        devices=torch.cuda.device_count() if torch.cuda.is_available() else 1,
+        strategy="ddp" if torch.cuda.device_count() > 1 else "auto",
+        max_epochs=epochs,
+        logger=logger,
+        callbacks=[checkpoint_all, checkpoint_best, early_stopping, stats_logger],
+        log_every_n_steps=50
+    )
+
+    # Dataset
     if data_from_splitted_files and os.path.exists("data/train_dataset.pkl") and os.path.exists("data/val_dataset.pkl"):
         with open("data/train_dataset.pkl", "rb") as f:
             train_dataset = pickle.load(f)
-        
         with open("data/val_dataset.pkl", "rb") as f:
             val_dataset = pickle.load(f)
     else:
         train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)
 
-    # Find maximum sequence length for padding
     lengths = np.asarray([len(sample) for sample in train_dataset.indexer.dataset.data["target"]])
     max_length = lengths.max() if lengths.size > 0 else 0
-
     lengths = np.asarray([len(sample) for sample in val_dataset.indexer.dataset.data["target"]])
     max_length = max(max_length, lengths.max() if lengths.size > 0 else 0)
 
-    # Create collate function for padding sequences
-    collate_fn = CostumPadCollate( # PadCollate
-        seq_fields= ["target", "observed_mask", "time_id", "variate_id", "prediction_mask"], #["target"],
+    collate_fn = CostumPadCollate(
+        seq_fields=["target", "observed_mask", "time_id", "variate_id", "prediction_mask"],
         target_field="target",
         pad_func_map={
             "target": pad_tensor,
@@ -121,111 +133,17 @@ def train(
             "time_id": pad_int_tensor,
             "variate_id": pad_int_tensor,
             "prediction_mask": pad_bool_tensor,
-            },
+        },
         max_length=max_length,
     )
 
-    train_dataloader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn,
-        num_workers=0, persistent_workers=False
-        )
-    val_dataloader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn,
-        num_workers=0, persistent_workers=False
-        )
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
-    os.makedirs("checkpoints", exist_ok=True)
+    # Train
+    trainer.fit(model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader)
 
-    best_val_loss = float("inf")
-    patience_counter = 0
-    val_losses = []
-    train_losses = []
-    times = []
-
-    model_to_use = model #model.module if hasattr(model, "module") else model #TODO
-
-    for epoch in range(epochs):
-        print(f"Epoch {epoch + 1}/{epochs}")
-        start_time = time.time()
-
-        # Train
-        model.train()
-        train_loss_total = 0
-        n_batches = 0
-
-        for batch_idx, batch in enumerate(train_dataloader):
-            batch = move_batch_to_device(batch, device_map)
-            optimizer.zero_grad()
-            loss = model_to_use.training_step(batch, batch_idx=batch_idx)
-            loss.backward()
-            optimizer.step()
-            train_loss_total += loss.item()
-            n_batches += 1
-
-        train_loss_avg = train_loss_total / n_batches
-        train_losses.append(train_loss_avg)
-        print(f"Epoch {epoch}: Train Loss = {train_loss_avg:.4f}")
-
-        # Validation
-        model.eval()
-        val_loss_total = 0
-        n_batches_val = 0
-
-        with torch.no_grad():
-            for batch_idx, batch in enumerate(val_dataloader):
-                batch = move_batch_to_device(batch, device_map)
-                val_loss = model_to_use.validation_step(batch, batch_idx=batch_idx)
-                val_loss_total += val_loss.item()
-                n_batches_val += 1
-        
-        val_loss_avg = val_loss_total / n_batches_val
-        val_losses.append(val_loss_avg)
-        print(f"Epoch {epoch}: Val Loss = {val_loss_avg:.4f}")
-
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        times.append(elapsed_time)
-        print(f"Epoch {epoch + 1} completed in {elapsed_time:.2f} seconds.")
-
-        # Early stopping
-        if val_loss_avg < best_val_loss:
-            best_val_loss = val_loss_avg
-            patience_counter = 0
-
-            # Save best model
-            if isinstance(model, torch.nn.DataParallel):
-                state_dict = model.module.state_dict()
-            else:
-                state_dict = model.state_dict()
-            torch.save({'state_dict': state_dict}, f"checkpoints/{model_name}_best.ckpt")
-            print("Saved best model.")
-        else:
-            patience_counter += 1
-            if patience_counter >= patience:
-                print("Early stopping triggered.")
-                break
-
-        # Save checkpoint per epoch
-        if isinstance(model, torch.nn.DataParallel):
-            state_dict = model.module.state_dict()
-        else:
-            state_dict = model.state_dict()
-        torch.save({'state_dict': state_dict}, f"checkpoints/{model_name}_epoch_{epoch}.ckpt")
-
-        print(f"Saved checkpoint for epoch {epoch}.")
-
-    # Save validation and training losses
-    os.makedirs("results", exist_ok=True)
-
-    with open(f"results/{model_name}_train_losses.json", "w") as f:
-        orjson.dump(train_losses, f)
-    with open(f"results/{model_name}_val_losses.json", "w") as f:
-        orjson.dump(val_losses, f)
-    print("Saved training and validation losses.")
-    with open(f"results/{model_name}_times.json", "w") as f:
-        orjson.dump(times, f)
-    print("Saved training times.")
-
+    print("Training complete.")
 
 if __name__ == "__main__":
     train()

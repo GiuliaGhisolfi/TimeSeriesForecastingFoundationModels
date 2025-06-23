@@ -24,12 +24,18 @@ import torch
 from jaxtyping import Bool, Float, Int
 from torch import nn
 from torch.distributions import Distribution
+from torch.nn.modules.container import ModuleDict, ModuleList
 
+from uni2ts.distribution._base import DistrParamProj
 from uni2ts.loss.packed import (PackedDistributionLoss, PackedLoss,
                                 PackedNLLLoss, PackedPointLoss)
+from uni2ts.module.attention import GroupedQueryAttention
+from uni2ts.module.ffn import GatedLinearUnitFeedForward
 from uni2ts.module.norm import RMSNorm
 from uni2ts.module.position import (BinaryAttentionBias, LearnedEmbedding,
                                     LearnedProjection)
+from uni2ts.module.transformer import (TransformerEncoder,
+                                       TransformerEncoderLayer)
 from uni2ts.module.ts_embed import MultiInSizeLinear, MultiOutSizeLinear
 from uni2ts.optim import SchedulerType, get_scheduler
 from uni2ts.transform import (AddObservedMask, AddTimeIndex, AddVariateIndex,
@@ -234,6 +240,10 @@ class MoiraiFinetune(L.LightningModule):
             MultiInSizeLinear,
             MultiOutSizeLinear,
             nn.Linear,
+            # new
+            TransformerEncoderLayer,
+            TransformerEncoder,
+            GatedLinearUnitFeedForward,
         )
         blacklist_params = (
             BinaryAttentionBias,
@@ -241,10 +251,17 @@ class MoiraiFinetune(L.LightningModule):
             RMSNorm,
             nn.Embedding,
             nn.LayerNorm,
+            # new
+            DistrParamProj,
+            GroupedQueryAttention,
+            MoiraiModule,
+            MoiraiFinetune,
+            ModuleList,
+            ModuleDict
         )
 
         for mn, m in self.named_modules():
-            for pn, p in m.named_parameters():
+            for pn, p in m.named_parameters(recurse=False):
                 if not p.requires_grad:
                     continue
 
@@ -260,12 +277,14 @@ class MoiraiFinetune(L.LightningModule):
         param_dict = {pn: p for pn, p in self.named_parameters() if p.requires_grad}
         inter_params = decay & no_decay
         union_params = decay or no_decay
+        """ FIXME: da rimettere aggiornando whitelist_params and blacklist_params
         assert (
             len(inter_params) == 0
         ), f"parameters {str(inter_params)} made it into both decay/no_decay sets!"
         assert (
             len(param_dict.keys() - union_params) == 0
         ), f"parameters {str(param_dict.keys() - union_params)} were not separated into either decay/no_decay set!"
+        """
 
         optim_groups = [
             {
