@@ -78,7 +78,7 @@ class CostumPadCollate(PadCollate):
 
         return default_collate(batch)
     
-    def get_sample_id(self, batch: list[Sample]) -> Int[torch.Tensor, "batch seq"]:
+    def get_sample_id(self, batch):
         sample_id = torch.stack(
             [
                 torch.cat([torch.ones(length), torch.zeros(self.max_sequence_length - length)])
