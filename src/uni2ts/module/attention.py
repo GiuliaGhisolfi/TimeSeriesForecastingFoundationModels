@@ -299,7 +299,7 @@ class GroupedQueryAttention(nn.Module):
             value,
             attn_mask=attn_mask,
             dropout_p=self.attn_dropout_p,
-            scale=self.softmax_scale,
+            #scale=self.softmax_scale, #TODO
         )
         out = rearrange(out, "... group hpg q_len dim -> ... q_len (group hpg dim)")
         return self.out_proj(out)
