@@ -24,36 +24,38 @@ class CostumPadCollate(PadCollate):
         for sample in batch:
             length = len(sample[self.target_field])
             feat_dim = sample[self.target_field].shape[1]
-
+            
             for key in self.seq_fields:
                 if sample[key].dim() == 1:
                     sample[key] = sample[key].unsqueeze(-1)
 
                 # Padding ts length
-                sample[key] = torch.cat(
-                    [
-                        default_convert(sample[key]),
-                        default_convert(
-                            self.pad_func_map[key](
-                                shape=(self.max_length - length,) + sample[key].shape[1:],
-                                dtype=sample[key].dtype,
-                            )
-                        ),
-                    ]
-                )
+                if length < self.max_length:
+                    sample[key] = torch.cat(
+                        [
+                            default_convert(sample[key]),
+                            default_convert(
+                                self.pad_func_map[key](
+                                    shape=(self.max_length - length,) + sample[key].shape[1:],
+                                    dtype=sample[key].dtype,
+                                )
+                            ),
+                        ]
+                    )
 
                 # Padding features dim
-                sample[key] = torch.cat(
-                    [
-                        default_convert(sample[key]),
-                        default_convert(
-                            self.pad_func_map[key](
-                                shape=(self.max_length, max_feat_dim-feat_dim),
-                                dtype=sample[key].dtype,
-                            )
-                        ),
-                    ],
-                    dim = -1
-                )
+                if max_feat_dim > feat_dim:
+                    sample[key] = torch.cat(
+                        [
+                            default_convert(sample[key]),
+                            default_convert(
+                                self.pad_func_map[key](
+                                    shape=(self.max_length, max_feat_dim - feat_dim),
+                                    dtype=sample[key].dtype,
+                                )
+                            ),
+                        ],
+                        dim=-1
+                    )
 
         return default_collate(batch)

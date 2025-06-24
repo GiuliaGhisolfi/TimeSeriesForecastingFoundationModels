@@ -2,7 +2,9 @@ import os
 import pickle
 
 import numpy as np
+import pandas as pd
 import torch
+from datasets import Dataset
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger
@@ -12,7 +14,7 @@ from moirai_utils.callbacks import EpochStatsLogger
 from moirai_utils.loader import CostumPadCollate
 from moirai_utils.moirai_utils import (get_train_and_val_datasets,
                                        pad_bool_tensor, pad_int_tensor,
-                                       pad_tensor)
+                                       pad_tensor, to_timeseries_dataset)
 from uni2ts.data.loader import DataLoader
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
@@ -31,6 +33,55 @@ PATIENCE = 3
 def move_batch_to_device(batch, device):
     return tree_map(lambda x: x.to(device) if isinstance(x, torch.Tensor) else x, batch)
 
+def split_long_time_series(dataset_obj: Dataset, max_seq_len: int):
+    """
+    Splits long time series in a dataset into multiple shorter series,
+    each with a maximum length of max_seq_len.
+    'target' is sliced.
+    'start' is adjusted for each sub-series.
+    Other metadata fields are duplicated.
+    """
+    print(f"Splitting time series to max_seq_len: {max_seq_len}")
+    new_data_lists = []
+
+    for sample, target_obj in zip(dataset_obj.indexer.dataset, dataset_obj):
+        groups = {}
+
+        target = target_obj["target"]
+        current_ts_length = len(target) # Access target directly from the sample dict
+
+        if current_ts_length <= max_seq_len:
+            for key in ["item_id", "start", "freq", "dataset"]:
+                groups[key] = sample[key]
+            groups["target"] = target
+        
+        else:
+            # Split the long series
+            num_chunks = (current_ts_length + max_seq_len - 1) // max_seq_len
+            
+            for k in range(num_chunks):
+                start_idx = k * max_seq_len
+                end_idx = min((k + 1) * max_seq_len, current_ts_length)
+
+                # Target
+                groups["target"] = target[start_idx:end_idx]
+
+                # "Start"
+                original_start_timestamp = pd.to_datetime(sample["start"])
+                groups["start"] = original_start_timestamp + start_idx * pd.to_timedelta(
+                    str(sample["freq"]).replace("T", "min"))
+
+                # Handle other metadata fields by duplicating
+                for key in ["item_id", "freq", "dataset"]:
+                    groups[key] = sample[key] # Access metadata directly
+        
+        new_data_lists.append(groups)
+    
+    # Create a new dataset instance from the lists of new data
+    print("Create a new dataset instance from the splitted time series...")
+    dataset = Dataset.from_list(new_data_lists, features=dataset_obj.indexer.dataset.features)
+    return to_timeseries_dataset(dataset)
+
 def train(
         model_name=MODEL_NAME,
         model_path=MODEL_PATH,
@@ -39,7 +90,8 @@ def train(
         patience=PATIENCE,
         data_from_splitted_files=True,
         test_size=TEST_SIZE,
-        batch_size=2,
+        batch_size=64,
+        max_sequence_length=1024,
         min_patches=16,
         min_mask_ratio=0.2,
         max_mask_ratio=0.5,
@@ -121,10 +173,8 @@ def train(
     else:
         train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)
 
-    lengths = np.asarray([len(sample) for sample in train_dataset.indexer.dataset.data["target"]])
-    max_length = lengths.max() if lengths.size > 0 else 0
-    lengths = np.asarray([len(sample) for sample in val_dataset.indexer.dataset.data["target"]])
-    max_length = max(max_length, lengths.max() if lengths.size > 0 else 0)
+    train_dataset= split_long_time_series(train_dataset, max_seq_len=max_sequence_length)
+    val_dataset= split_long_time_series(val_dataset, max_seq_len=max_sequence_length)
 
     collate_fn = CostumPadCollate(
         seq_fields=["target", "observed_mask", "time_id", "variate_id", "prediction_mask"],
@@ -136,7 +186,7 @@ def train(
             "variate_id": pad_int_tensor,
             "prediction_mask": pad_bool_tensor,
         },
-        max_length=max_length,
+        max_length=max_sequence_length,
     )
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
