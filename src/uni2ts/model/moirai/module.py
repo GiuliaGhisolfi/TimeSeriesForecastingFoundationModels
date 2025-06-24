@@ -157,7 +157,8 @@ class MoiraiModule(
         """
         loc, scale = self.scaler(
             target,
-            observed_mask * ~prediction_mask.unsqueeze(-1),
+            observed_mask * ~prediction_mask,
+            #FIXME: (original code): observed_mask * ~prediction_mask.unsqueeze(-1),
             sample_id,
             variate_id,
         )

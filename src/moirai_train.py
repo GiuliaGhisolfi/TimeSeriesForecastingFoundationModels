@@ -17,6 +17,8 @@ from uni2ts.data.loader import DataLoader
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
+torch.set_float32_matmul_precision('medium')
+
 MODEL_PATH = "Salesforce/moirai-1.0-R-small"
 MODEL_NAME = "moirai_small"
 DEVICE_MAP = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -37,7 +39,7 @@ def train(
         patience=PATIENCE,
         data_from_splitted_files=True,
         test_size=TEST_SIZE,
-        batch_size=64,
+        batch_size=2,
         min_patches=16,
         min_mask_ratio=0.2,
         max_mask_ratio=0.5,
