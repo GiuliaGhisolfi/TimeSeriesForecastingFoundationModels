@@ -9,6 +9,10 @@ from uni2ts.data.loader import PackCollate, PadCollate
 
 class CostumPadCollate(PadCollate):
 
+    def __init__(self, *args, max_sequence_length, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_sequence_length = max_sequence_length
+    
     def pad_samples(self, batch: list[Sample]) -> BatchedSample:
         # num features (variate)
         max_feat_dim = 1
@@ -20,8 +24,22 @@ class CostumPadCollate(PadCollate):
                 feat_dim = tensor.shape[1]
             max_feat_dim = max(max_feat_dim, feat_dim)
 
+        """
+        # Trimming
+        for sample in batch:
+            current_length = len(sample[self.target_field])
+            for key in self.seq_fields:
+                if current_length > self.max_length:
+                    sample[key] = sample[key][:self.max_length]
+        """
+
         # Padding
         for sample in batch:
+            current_length = len(sample[self.target_field])
+            if current_length > self.max_sequence_length: # Trimming
+                for key in self.seq_fields:
+                    sample[key] = sample[key][:self.max_sequence_length]
+            
             length = len(sample[self.target_field])
             feat_dim = sample[self.target_field].shape[1]
             
@@ -30,13 +48,13 @@ class CostumPadCollate(PadCollate):
                     sample[key] = sample[key].unsqueeze(-1)
 
                 # Padding ts length
-                if length < self.max_length:
+                if length < self.max_sequence_length:
                     sample[key] = torch.cat(
                         [
                             default_convert(sample[key]),
                             default_convert(
                                 self.pad_func_map[key](
-                                    shape=(self.max_length - length,) + sample[key].shape[1:],
+                                    shape=(self.max_sequence_length - length,) + sample[key].shape[1:],
                                     dtype=sample[key].dtype,
                                 )
                             ),
@@ -50,7 +68,7 @@ class CostumPadCollate(PadCollate):
                             default_convert(sample[key]),
                             default_convert(
                                 self.pad_func_map[key](
-                                    shape=(self.max_length, max_feat_dim - feat_dim),
+                                    shape=(self.max_sequence_length, max_feat_dim - feat_dim),
                                     dtype=sample[key].dtype,
                                 )
                             ),

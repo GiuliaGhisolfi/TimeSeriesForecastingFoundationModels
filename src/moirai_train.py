@@ -20,6 +20,7 @@ from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
 torch.set_float32_matmul_precision('medium')
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:64"
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small"
 MODEL_NAME = "moirai_small"
@@ -90,7 +91,7 @@ def train(
         patience=PATIENCE,
         data_from_splitted_files=True,
         test_size=TEST_SIZE,
-        batch_size=64,
+        batch_size=1,
         max_sequence_length=1024,
         min_patches=16,
         min_mask_ratio=0.2,
@@ -173,8 +174,12 @@ def train(
     else:
         train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)
 
-    train_dataset= split_long_time_series(train_dataset, max_seq_len=max_sequence_length)
-    val_dataset= split_long_time_series(val_dataset, max_seq_len=max_sequence_length)
+    #train_dataset= split_long_time_series(train_dataset, max_seq_len=max_sequence_length) # TODO:
+    #val_dataset= split_long_time_series(val_dataset, max_seq_len=max_sequence_length)
+    lengths = np.asarray([len(sample) for sample in train_dataset.indexer.dataset.data["target"]])
+    max_length = lengths.max() if lengths.size > 0 else 0
+    lengths = np.asarray([len(sample) for sample in val_dataset.indexer.dataset.data["target"]])
+    max_length = max(max_length, lengths.max() if lengths.size > 0 else 0)
 
     collate_fn = CostumPadCollate(
         seq_fields=["target", "observed_mask", "time_id", "variate_id", "prediction_mask"],
@@ -186,7 +191,8 @@ def train(
             "variate_id": pad_int_tensor,
             "prediction_mask": pad_bool_tensor,
         },
-        max_length=max_sequence_length,
+        max_length=max_length,
+        max_sequence_length=max_sequence_length,
     )
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
