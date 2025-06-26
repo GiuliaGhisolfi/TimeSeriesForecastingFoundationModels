@@ -19,7 +19,7 @@ from uni2ts.data.loader import DataLoader
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
-torch.set_float32_matmul_precision('medium')
+torch.set_float32_matmul_precision('medium') # TODO: change
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small"
@@ -91,12 +91,12 @@ def train(
         patience=PATIENCE,
         data_from_splitted_files=True,
         test_size=TEST_SIZE,
-        batch_size=1,
-        max_sequence_length=1024,
+        batch_size=128,
+        max_sequence_length=512,#1024,
         min_patches=16,
         min_mask_ratio=0.2,
         max_mask_ratio=0.5,
-        max_dim=512,#1024,
+        max_dim=1024,
         beta1=0.9,
         beta2=0.98,
         loss_func=PackedNLLLoss(),
@@ -164,7 +164,7 @@ def train(
         callbacks=[checkpoint_all, checkpoint_best, early_stopping, stats_logger],
         log_every_n_steps=50,
         accumulate_grad_batches=1, # default
-        precision="16-mixed",
+        #precision="16-mixed",
     )
 
     # Dataset
