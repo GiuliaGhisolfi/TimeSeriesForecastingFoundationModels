@@ -1,3 +1,4 @@
+import argparse
 import os
 import pickle
 
@@ -91,7 +92,7 @@ def train(
         patience=PATIENCE,
         data_from_splitted_files=True,
         test_size=TEST_SIZE,
-        batch_size=128,
+        batch_size=2,
         max_sequence_length=512,#1024,
         min_patches=16,
         min_mask_ratio=0.2,
@@ -206,4 +207,34 @@ def train(
     print("Training complete.")
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--epochs", type=int, default=EPOCHS)
+    parser.add_argument("--patience", type=int, default=PATIENCE)
+    parser.add_argument("--batch_size", type=int, default=2)
+    parser.add_argument("--max_sequence_length", type=int, default=512)
+    parser.add_argument("--min_patches", type=int, default=16)
+    parser.add_argument("--min_mask_ratio", type=float, default=0.2)
+    parser.add_argument("--max_mask_ratio", type=float, default=0.5)
+    parser.add_argument("--max_dim", type=int, default=1024)
+    parser.add_argument("--beta1", type=float, default=0.9)
+    parser.add_argument("--beta2", type=float, default=0.98)
+    parser.add_argument("--learning_rate", type=float, default=1e-3)
+    parser.add_argument("--weight_decay", type=float, default=1e-2)
+
+    args = parser.parse_args()
+
+    train(
+        epochs=args.epochs,
+        patience=args.patience,
+        batch_size=args.batch_size,
+        max_sequence_length=args.max_sequence_length,
+        min_patches=args.min_patches,
+        min_mask_ratio=args.min_mask_ratio,
+        max_mask_ratio=args.max_mask_ratio,
+        max_dim=args.max_dim,
+        beta1=args.beta1,
+        beta2=args.beta2,
+        learning_rate=args.learning_rate,
+        weight_decay=args.weight_decay,
+    )
