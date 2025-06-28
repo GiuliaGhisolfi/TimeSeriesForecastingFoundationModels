@@ -193,6 +193,14 @@ class GroupedQueryAttention(nn.Module):
                 kv_id=kv_time_id,
             )
 
+        # FIXME: my code
+        attn_bias = attn_bias.permute(1, 0, 2, 3, 4, 5)
+        attn_bias = attn_bias.squeeze(-1).squeeze(-1).squeeze(-1)
+        attn_bias = attn_bias.permute(1, 2, 0)
+        attn_bias = attn_bias[:, :, None, :, None].expand(-1, -1, 1, -1, -1)
+        attn_bias = attn_bias.permute(0, 2, 1, 3, 4)
+        ################
+
         attn_mask = (
             attn_mask
             if isinstance(attn_bias, int)
@@ -293,6 +301,13 @@ class GroupedQueryAttention(nn.Module):
             kv_time_id=kv_time_id,
         )
 
+        # FIXME: my code
+        query = query.squeeze(0).squeeze(2)  # dim == 1
+        key = key.squeeze(0).squeeze(2)
+        value = value.squeeze(0).squeeze(2)
+        attn_mask = attn_mask.squeeze(1)
+        ################
+
         out = F.scaled_dot_product_attention(
             query,
             key,
@@ -301,6 +316,10 @@ class GroupedQueryAttention(nn.Module):
             dropout_p=self.attn_dropout_p,
             #scale=self.softmax_scale, #TODO
         )
+        # FIXME: my code
+        out = out.unsqueeze(2).unsqueeze(0)
+        # [batch_size, 6, ts_len, 64] - > [1, batch_size, 6, 1, ts_len, 64]
+        ################
         out = rearrange(out, "... group hpg q_len dim -> ... q_len (group hpg dim)")
         return self.out_proj(out)
 

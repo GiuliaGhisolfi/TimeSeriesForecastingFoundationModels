@@ -95,10 +95,11 @@ class Mixture(Distribution):
                     f"of the distribution {repr(self)}, "
                     f"but found invalid values:\n{value}"
                 )
-
-        weights_log_probs = self.weights.logits.expand(
+        """weights_log_probs = self.weights.logits.expand( # FIXME: original code
             value.shape + (len(self.components),)
-        )
+        )"""
+        weights_log_probs = self.weights.logits # my code
+
         weights_log_probs = torch.stack(weights_log_probs.unbind(dim=-1))
         # avoid nan grads, https://github.com/tensorflow/probability/blob/main/discussion/where-nan.pdf
         components_log_probs = torch.stack(

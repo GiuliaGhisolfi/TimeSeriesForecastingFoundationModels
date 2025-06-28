@@ -59,8 +59,12 @@ def mask_fill(
     mask: Bool[torch.Tensor, "*batch"],
     value: Float[torch.Tensor, "dim"],
 ) -> Float[torch.Tensor, "*batch dim"]:
-    mask = mask.unsqueeze(-1)
-    return tensor * ~mask + value * mask
+    #mask = mask.unsqueeze(-1) # FIXME: original code
+    #return tensor * ~mask + value * mask
+
+    value = value.unsqueeze(0).unsqueeze(0) # new code
+    output = (tensor * ~mask + value * mask)
+    return output
 
 
 def safe_div(

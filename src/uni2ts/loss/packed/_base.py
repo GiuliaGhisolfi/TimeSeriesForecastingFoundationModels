@@ -81,11 +81,15 @@ class PackedLoss(abc.ABC):
         sample_id: Optional[Int[torch.Tensor, "*batch seq_len"]],
         variate_id: Optional[Int[torch.Tensor, "*batch seq_len"]],
     ) -> Float[torch.Tensor, ""]:
+        variate_id = variate_id.squeeze(-1) # FIXME: my code
         id_mask = torch.logical_and(
             torch.eq(sample_id.unsqueeze(-1), sample_id.unsqueeze(-2)),
             torch.eq(variate_id.unsqueeze(-1), variate_id.unsqueeze(-2)),
         )
-        mask = prediction_mask.unsqueeze(-1) * observed_mask
+
+        #mask = prediction_mask.unsqueeze(-1) * observed_mask # FIXME: original code
+        mask = prediction_mask * observed_mask
+
         tobs = reduce(
             id_mask
             * reduce(
@@ -97,7 +101,8 @@ class PackedLoss(abc.ABC):
             "sum",
         )
         nobs = reduce(
-            id_mask * rearrange(prediction_mask, "... seq -> ... 1 seq"),
+            #id_mask * rearrange(prediction_mask, "... seq -> ... 1 seq"), # FIXME: original code
+            id_mask.unsqueeze(-1) * rearrange(prediction_mask, "... seq -> ... 1 seq"),
             "... seq1 seq2 -> ... seq1 1",
             "sum",
         ) * prediction_mask.unsqueeze(-1)

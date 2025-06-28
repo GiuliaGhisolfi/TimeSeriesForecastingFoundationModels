@@ -93,7 +93,7 @@ def train(
         data_from_splitted_files=True,
         test_size=TEST_SIZE,
         batch_size=2,
-        max_sequence_length=512,#1024,
+        max_sequence_length=None,#1024,
         min_patches=16,
         min_mask_ratio=0.2,
         max_mask_ratio=0.5,
@@ -184,6 +184,8 @@ def train(
     lengths = np.asarray([len(sample) for sample in val_dataset.indexer.dataset.data["target"]])
     max_length = max(max_length, lengths.max() if lengths.size > 0 else 0)
 
+    max_sequence_length = max_length if max_sequence_length is None else max_sequence_length
+
     collate_fn = CostumPadCollate(
         seq_fields=["target", "observed_mask", "time_id", "variate_id", "prediction_mask"],
         target_field="target",
@@ -201,6 +203,8 @@ def train(
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
+    print(train_dataloader)
+
     # Train
     trainer.fit(model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader)
 
@@ -212,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=EPOCHS)
     parser.add_argument("--patience", type=int, default=PATIENCE)
     parser.add_argument("--batch_size", type=int, default=2)
-    parser.add_argument("--max_sequence_length", type=int, default=512)
+    parser.add_argument("--max_sequence_length", type=int, default=None)
     parser.add_argument("--min_patches", type=int, default=16)
     parser.add_argument("--min_mask_ratio", type=float, default=0.2)
     parser.add_argument("--max_mask_ratio", type=float, default=0.5)

@@ -96,7 +96,8 @@ class MultiInSizeLinear(nn.Module):
             weight = self.weight[idx] * self.mask[idx]
             bias = self.bias[idx] if self.bias is not None else 0
             out = out + (
-                torch.eq(in_feat_size, feat_size).unsqueeze(-1)
+                torch.eq(in_feat_size, feat_size).unsqueeze(-1).unsqueeze(-1)
+                #torch.eq(in_feat_size, feat_size).unsqueeze(-1) #FIXME: ORIGINAL CODE
                 * (einsum(weight, x, "out inp, ... inp -> ... out") + bias)
             )
         return out
@@ -237,7 +238,8 @@ class MultiOutSizeLinear(nn.Module):
             weight = self.weight[idx] * self.mask[idx]
             bias = self.bias[idx] if self.bias is not None else 0
             out = out + (
-                torch.eq(out_feat_size, feat_size // self.dim).unsqueeze(-1)
+                # torch.eq(out_feat_size, feat_size // self.dim).unsqueeze(-1) # FIXME: original code
+                torch.eq(out_feat_size, feat_size // self.dim).unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
                 * (einsum(weight, x, "out inp, ... inp -> ... out") + bias)
             )
         return out

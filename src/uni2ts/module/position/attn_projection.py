@@ -100,6 +100,13 @@ class RotaryProjection(Projection):
         x: Float[torch.Tensor, "*batch group hpg seq dim"],
         seq_id: Optional[Int[torch.Tensor, "*batch #group #hpg seq"]],
     ) -> Float[torch.Tensor, "*batch group hpg seq dim"]:
+        # FIXME: my code
+        B, G, H, P, S, D = x.shape
+        seq_id = torch.arange(S, device=x.device)
+        seq_id = seq_id.view(1, 1, 1, 1, S)
+        seq_id = seq_id.expand(B, G, H, P, S)
+        ################
+
         self._init_freq(max_len=seq_id.max() + 1)
         rot_cos = self.cos[seq_id]
         rot_sin = self.sin[seq_id]

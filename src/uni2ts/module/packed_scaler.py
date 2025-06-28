@@ -42,10 +42,6 @@ class PackedScaler(nn.Module):
                 target.shape[:-1], dtype=torch.long, device=target.device
             )
 
-        print(
-            "sample_id: ", sample_id.shape,
-            "variate_id: ", variate_id.shape
-        )
         loc, scale = self._get_loc_scale(
             target.double(), observed_mask, sample_id, variate_id
         )
@@ -95,6 +91,7 @@ class PackedStdScaler(PackedScaler):
         Float[torch.Tensor, "*batch 1 #dim"], Float[torch.Tensor, "*batch 1 #dim"]
     ]:
         #sample_id = sample_id.unsqueeze(-1)  # TODO: change
+        variate_id = variate_id.squeeze(-1)
         id_mask = torch.logical_and(
             torch.eq(sample_id.unsqueeze(-1), sample_id.unsqueeze(-2)),
             torch.eq(variate_id.unsqueeze(-1), variate_id.unsqueeze(-2)),
