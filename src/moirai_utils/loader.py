@@ -9,30 +9,12 @@ from uni2ts.data.loader import PackCollate, PadCollate
 
 class CostumPadCollate(PadCollate):
 
-    def __init__(self, *args, max_sequence_length, **kwargs):
+    def __init__(self, *args, max_sequence_length, max_feat_dim, **kwargs):
         super().__init__(*args, **kwargs)
         self.max_sequence_length = max_sequence_length
+        self.max_feat_dim = max_feat_dim
     
     def pad_samples(self, batch: list[Sample]) -> BatchedSample:
-        # num features (variate)
-        max_feat_dim = 1
-        for sample in batch:
-            tensor = sample[self.target_field]
-            if tensor.ndim == 1:
-                feat_dim = 1
-            else:
-                feat_dim = tensor.shape[1]
-            max_feat_dim = max(max_feat_dim, feat_dim)
-
-        """
-        # Trimming
-        for sample in batch:
-            current_length = len(sample[self.target_field])
-            for key in self.seq_fields:
-                if current_length > self.max_length:
-                    sample[key] = sample[key][:self.max_length]
-        """
-
         # Padding
         for sample in batch:
             current_length = len(sample[self.target_field])
@@ -62,13 +44,13 @@ class CostumPadCollate(PadCollate):
                     )
 
                 # Padding features dim
-                if max_feat_dim > feat_dim:
+                if self.max_feat_dim > feat_dim:
                     sample[key] = torch.cat(
                         [
                             default_convert(sample[key]),
                             default_convert(
                                 self.pad_func_map[key](
-                                    shape=(self.max_sequence_length, max_feat_dim - feat_dim),
+                                    shape=(self.max_sequence_length, self.max_feat_dim - feat_dim),
                                     dtype=sample[key].dtype,
                                 )
                             ),

@@ -20,7 +20,7 @@ from uni2ts.data.loader import DataLoader
 from uni2ts.loss.packed import PackedNLLLoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
-torch.set_float32_matmul_precision('medium') # TODO: change
+torch.set_float32_matmul_precision('medium')
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
 
 MODEL_PATH = "Salesforce/moirai-1.0-R-small"
@@ -165,7 +165,7 @@ def train(
         callbacks=[checkpoint_all, checkpoint_best, early_stopping, stats_logger],
         log_every_n_steps=50,
         accumulate_grad_batches=1, # default
-        #precision="16-mixed",
+        #precision="16-mixed", # mixed precision (fp16)
     )
 
     # Dataset
@@ -186,6 +186,15 @@ def train(
 
     max_sequence_length = max_length if max_sequence_length is None else max_sequence_length
 
+    def compute_max_feat_dim(dataset):
+        max_feat_dim = 1
+        for sample in dataset:
+            max_feat_dim = max(max_feat_dim, len(sample[0]))
+            print(len(sample[0]))
+        return max_feat_dim # num features (variate)
+    max_feat_dim = compute_max_feat_dim(train_dataset.indexer.dataset.data["target"])
+    max_feat_dim = max(max_feat_dim, compute_max_feat_dim(val_dataset.indexer.dataset.data["target"]))
+
     collate_fn = CostumPadCollate(
         seq_fields=["target", "observed_mask", "time_id", "variate_id", "prediction_mask"],
         target_field="target",
@@ -198,15 +207,14 @@ def train(
         },
         max_length=max_length,
         max_sequence_length=max_sequence_length,
+        max_feat_dim=max_feat_dim,
     )
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
-    print(train_dataloader)
-
     # Train
-    trainer.fit(model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader)
+    trainer.fit(model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader) #FIXME
 
     print("Training complete.")
 
