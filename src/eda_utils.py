@@ -5,32 +5,18 @@ from datasets import Dataset
 
 
 def main():
-    indexed_dataset = Dataset.load_from_disk("data/moirai_dataset")
+    ds = Dataset.load_from_disk("data/moirai_dataset")
 
-    df = pd.DataFrame(columns=[
-        "dataset", "ts_len", "num_variates", "item_id", "start", "freq"
-    ])
+    def extract_info(example):
+        target = example["target"]
+        return {
+            "ts_len": len(target),
+            "num_variates": len(target[0]) if target else 0,
+        }
 
-    dataset, item_id, strat, freq, ts_len, num_variates = [], [], [], [], [], []
-
-    # save features
-    for sample in indexed_dataset:
-        dataset.append(sample["dataset"])
-        item_id.append(sample["item_id"])
-        strat.append(sample["start"])
-        freq.append(sample["freq"])
-        ts_len.append(len(sample["target"]))
-        num_variates.append(len(sample["target"][0]))
-
-    # compose df
-    df["dataset"] = dataset
-    df["ts_len"] = ts_len
-    df["num_variates"] = num_variates
-    df["item_id"] = item_id
-    df["start"] = strat
-    df["freq"] = freq
-
-    df.to_csv("results/dataset_info.csv")
+    ds = ds.map(extract_info, desc="Extracting time series info")
+    df = ds.to_pandas()[["dataset", "item_id", "start", "freq", "ts_len", "num_variates"]]
+    df.to_csv("results/dataset_info.csv", index=False)
 
     ##############################################################################
 
