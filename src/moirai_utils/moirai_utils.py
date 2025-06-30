@@ -6,6 +6,7 @@ from datasets import Dataset
 
 from compose_moirai_dataset import concatenate_moirai_datasets
 from moirai_utils.load_moirai_data import load_data
+from moirai_utils.split_long_series_dataset import split_long_series_dataset
 from moirai_utils.transformations import ToTorch
 from uni2ts.data.dataset import SampleTimeSeriesType, TimeSeriesDataset
 from uni2ts.data.indexer.hf_dataset_indexer import HuggingFaceDatasetIndexer
@@ -47,16 +48,23 @@ def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=
 
     return train_dataset, val_dataset
 
-def to_timeseries_dataset(indexed_dataset, transform=ToTorch(), sample_time_series=SampleTimeSeriesType.NONE):
+def to_timeseries_dataset(
+    indexed_dataset,
+    context_length=2048,
+    prediction_length=256,
+    sample_time_series=SampleTimeSeriesType.NONE
+):
+    transform = ToTorch(context_length=context_length, prediction_length=prediction_length)
     indexer = HuggingFaceDatasetIndexer(indexed_dataset)
     return TimeSeriesDataset(
         indexer=indexer,
-        transform=transform, # Identity == no transformation is needed
+        transform=transform,
         sample_time_series=sample_time_series, # SampleTimeSeriesType.NONE/UNIFORM/PROPORTIONAL
     )
 
 def get_train_and_val_datasets(dataset_path="data/moirai_dataset", yaml_path="data/datasets.yaml",
-        stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED):
+        stratify_col="dataset", context_length=2048, prediction_length=256,
+        test_size=TEST_SIZE, seed=RANDOM_SEED):
     # Check if datset are already loaded
     if os.path.exists("data/moirai_dataset"):
         print("Train and validation datasets already exist. Loading from disk...")
@@ -73,12 +81,31 @@ def get_train_and_val_datasets(dataset_path="data/moirai_dataset", yaml_path="da
         indexed_dataset = load_data(yaml_path=yaml_path)
         # and save it to disk
         save_train_and_val_datasets(yaml_path, dataset_path)
+    
+    # Split time series
+    indexed_dataset = split_long_series_dataset(
+        indexed_dataset,
+        context_length=context_length,
+        prediction_length=prediction_length
+        )
 
     # Stratified split
     train_dataset, val_dataset = stratified_split(
         indexed_dataset, stratify_col=stratify_col, test_size=test_size, seed=seed)
 
-    return to_timeseries_dataset(train_dataset), to_timeseries_dataset(val_dataset)
+    # Convert to TimeSeriesDataset
+    train_dataset = to_timeseries_dataset(
+        train_dataset,
+        context_length=context_length,
+        prediction_length=prediction_length
+        )
+    val_dataset = to_timeseries_dataset(
+        val_dataset,
+        context_length=context_length,
+        prediction_length=prediction_length
+        )
+
+    return train_dataset, val_dataset
 
 def save_train_and_val_datasets(yaml_path="data/datasets.yaml", dataset_path="data/moirai_dataset"):
     full_dataset = load_data(yaml_path=yaml_path)
