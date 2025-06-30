@@ -30,5 +30,5 @@ class PackedNLLLoss(PackedDistributionLoss):
         sample_id: Int[torch.Tensor, "*batch seq_len"],
         variate_id: Int[torch.Tensor, "*batch seq_len"],
     ) -> Float[torch.Tensor, "*batch seq_len #dim"]:
-        target = torch.nan_to_num(target, nan=0.0, posinf=1e9, neginf=-1e9)
+        target = torch.nan_to_num(target, nan=0.0, posinf=1e9, neginf=-1e9) # FIXME: my code
         return -pred.log_prob(target)
