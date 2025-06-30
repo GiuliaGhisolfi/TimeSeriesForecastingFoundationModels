@@ -80,6 +80,7 @@ class Mixture(Distribution):
 
     def log_prob(self, value: torch.Tensor) -> torch.Tensor:
         if self._validate_args:
+            value = torch.nan_to_num(value, nan=0.0, posinf=1e9, neginf=-1e9) # FIXME: my code
             self._validate_sample(value)
 
             # Check at least in 1 support
@@ -179,9 +180,18 @@ class MixtureOutput(DistributionOutput):
         distr_params: PyTree,
         validate_args: Optional[bool] = None,
     ) -> Distribution:
+        # FIXME: my code
+        logits = distr_params["weights_logits"]
+
+        logits = torch.nan_to_num(logits, nan=0.0, posinf=1e9, neginf=-1e9) # clamp if needed
+        if torch.isnan(logits).any():
+            raise ValueError("Found NaNs in weights_logits")
+        ################
+
         return self.distr_cls(
             weights=Categorical(
-                logits=distr_params["weights_logits"], validate_args=validate_args
+                #logits=distr_params["weights_logits"], validate_args=validate_args #FIXME: original code
+                logits=logits, validate_args=validate_args
             ),
             components=[
                 component._distribution(comp_params, validate_args=validate_args)

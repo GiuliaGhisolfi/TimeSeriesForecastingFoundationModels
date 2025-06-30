@@ -57,6 +57,8 @@ class CostumPadCollate(PadCollate):
                         ],
                         dim=-1
                     )
+                elif self.max_feat_dim < feat_dim: # TODO: togliere
+                    sample[key] = sample[key][..., :self.max_feat_dim]
 
         return default_collate(batch)
     

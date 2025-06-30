@@ -39,6 +39,12 @@ class NegativeBinomial(Distribution):
         logits: Union[float, torch.Tensor],
         validate_args: Optional[bool] = None,
     ):
+        # FIXME: my code
+        total_count = torch.nan_to_num(total_count, nan=0.0, posinf=1e9, neginf=-1e9)
+        total_count = torch.clamp(total_count, min=1e-6)
+
+        logits = torch.nan_to_num(logits, nan=0.0, posinf=1e9, neginf=-1e9)
+        #################
         (
             self.total_count,
             self.logits,

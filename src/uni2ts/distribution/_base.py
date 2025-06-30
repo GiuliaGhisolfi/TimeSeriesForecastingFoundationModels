@@ -181,6 +181,12 @@ class DistributionOutput:
         distr_params: PyTree,
         validate_args: Optional[bool] = None,
     ) -> Distribution:
+        for param, value in distr_params.items(): # FIXME: my code
+            value = torch.nan_to_num(value, nan=0.0, posinf=1e9, neginf=-1e9) # clamp if needed
+            if param == "df" or param == "scale":
+                value = torch.clamp(value, min=1e-6)
+            distr_params[param] = value
+
         return self.distr_cls(**distr_params, validate_args=validate_args)
 
     @property
