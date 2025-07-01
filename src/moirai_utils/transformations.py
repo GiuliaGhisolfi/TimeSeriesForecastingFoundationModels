@@ -8,7 +8,8 @@ from uni2ts.transform import (AddObservedMask, AddTimeIndex, AddVariateIndex,
 
 
 class ToTorch(Transformation):
-    def __init__(self, context_length=2048, prediction_length=256):
+    def __init__(self, context_length=2048, prediction_length=256): #FIX ME: ???
+        #super().__init__()
         self.context_length = context_length
         self.prediction_length = prediction_length
 

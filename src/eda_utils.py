@@ -5,6 +5,7 @@ from datasets import Dataset
 
 
 def main():
+    """
     ds = Dataset.load_from_disk("data/moirai_dataset")
 
     def extract_info(example):
@@ -19,6 +20,40 @@ def main():
     df.to_csv("results/dataset_info.csv", index=False)
 
     ##############################################################################
+
+    with open("data/train_dataset_full_ts.pkl", "rb") as f:
+        train_dataset = pickle.load(f)
+    
+    with open("data/val_dataset_full_ts.pkl", "rb") as f:
+        val_dataset = pickle.load(f)
+    
+    df = pd.DataFrame(columns=[
+        "ts_len", "num_variates", "split",
+    ])
+
+    # ts lenghts
+    ts_len, num_variates = [], []
+    split = []
+
+    for sample in train_dataset.indexer.dataset.data["target"]:
+        ts_len.append(len(sample))
+        num_variates.append(len(sample[0]))
+        split.append("train")
+    
+    for sample in val_dataset.indexer.dataset.data["target"]:
+        ts_len.append(len(sample))
+        num_variates.append(len(sample[0]))
+        split.append("val")
+    
+    # compose df
+    df["ts_len"] = ts_len
+    df["num_variates"] = num_variates
+    df["split"] = split
+
+    df.to_csv("results/dataset_train_val_info.csv")
+
+    ##############################################################################
+    """
 
     with open("data/train_dataset.pkl", "rb") as f:
         train_dataset = pickle.load(f)
@@ -49,9 +84,7 @@ def main():
     df["num_variates"] = num_variates
     df["split"] = split
 
-    df.to_csv("results/dataset_train_val_info.csv")
-
-    ##############################################################################
+    df.to_csv("results/dataset_splitted_info.csv")
 
     print("Done :)")
 

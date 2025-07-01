@@ -31,6 +31,13 @@ class EpochStatsLogger(Callback):
         if val_loss is not None:
             self.val_losses.append(val_loss.item())
 
+        msg = f"Epoch {trainer.current_epoch + 1} completed in {elapsed:.2f}s"
+        if train_loss is not None:
+            msg += f" — Train Loss: {train_loss.item():.4f}"
+        if val_loss is not None:
+            msg += f" — Val Loss: {val_loss.item():.4f}"
+        print(msg)
+
         # Save losses and times to disk after each epoch
         with open(f"results/{self.model_name}_train_losses.json", "wb") as f:
             f.write(orjson.dumps(self.train_losses))

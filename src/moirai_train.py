@@ -23,8 +23,12 @@ from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 torch.set_float32_matmul_precision('high')
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:64"
 
-MODEL_PATH = "Salesforce/moirai-1.0-R-small"
 MODEL_NAME = "moirai_small"
+MODEL_MAP = {
+    "moirai_small": "Salesforce/moirai-1.1-R-small",
+    "moirai_base": "Salesforce/moirai-1.1-R-base",
+    "moirai_large": "Salesforce/moirai-1.1-R-large",
+}
 DEVICE_MAP = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 EPOCHS = 10
@@ -37,7 +41,6 @@ def move_batch_to_device(batch, device):
 
 def train(
         model_name=MODEL_NAME,
-        model_path=MODEL_PATH,
         device_map=DEVICE_MAP,
         epochs=EPOCHS,
         patience=PATIENCE,
@@ -53,12 +56,13 @@ def train(
         beta2=0.98,
         loss_func=PackedNLLLoss(),
         val_metric=PackedNLLLoss(),
-        learning_rate=1e-3,
+        learning_rate=1e-5, # default: 1e-3
         weight_decay=1e-2
         ):
     print(f"Using device: {device_map}")
 
     # Model
+    model_path = MODEL_MAP[model_name]
     pretrained_module = MoiraiModule.from_pretrained(model_path).to(device_map)
 
     model = MoiraiFinetune(
@@ -122,10 +126,10 @@ def train(
     )
 
     # Dataset
-    if data_from_splitted_files and os.path.exists("data/train_dataset.pkl") and os.path.exists("data/val_dataset.pkl"):
-        with open("data/train_dataset.pkl", "rb") as f:
+    if data_from_splitted_files and os.path.exists("data/train_dataset_full_ts.pkl") and os.path.exists("data/val_dataset_full_ts.pkl"):
+        with open("data/train_dataset_full_ts.pkl", "rb") as f:
             train_dataset = pickle.load(f)
-        with open("data/val_dataset.pkl", "rb") as f:
+        with open("data/val_dataset_full_ts.pkl", "rb") as f:
             val_dataset = pickle.load(f)
     else:
         train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)
@@ -163,6 +167,7 @@ def train(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("--model_name", type=str, default=MODEL_NAME)
     parser.add_argument("--epochs", type=int, default=EPOCHS)
     parser.add_argument("--patience", type=int, default=PATIENCE)
     parser.add_argument("--batch_size", type=int, default=2)
@@ -179,6 +184,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     train(
+        model_name=args.model_name,
         epochs=args.epochs,
         patience=args.patience,
         batch_size=args.batch_size,
