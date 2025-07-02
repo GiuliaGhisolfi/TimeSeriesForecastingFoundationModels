@@ -95,13 +95,6 @@ def train(
         every_n_epochs=1,
         save_top_k=-1
     )
-    checkpoint_best = ModelCheckpoint(
-        dirpath="checkpoints",
-        filename=f"{model_name}_best",
-        monitor="val/PackedNLLLoss",
-        mode="min",
-        save_top_k=1
-    )
     early_stopping = EarlyStopping(
         monitor="val/PackedNLLLoss",
         mode="min",
@@ -117,7 +110,7 @@ def train(
         strategy="ddp" if torch.cuda.device_count() > 1 else "auto",
         max_epochs=epochs,
         logger=logger,
-        callbacks=[checkpoint_all, checkpoint_best, early_stopping, stats_logger],
+        callbacks=[checkpoint_all, early_stopping, stats_logger],
         log_every_n_steps=50,
         accumulate_grad_batches=1, # default
         #precision="16-mixed", # mixed precision (fp16)

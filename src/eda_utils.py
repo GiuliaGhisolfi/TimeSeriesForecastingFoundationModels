@@ -5,6 +5,7 @@ from datasets import Dataset
 
 
 def main():
+    """
     ds = Dataset.load_from_disk("data/moirai_dataset")
 
     def extract_info(example):
@@ -67,6 +68,7 @@ def main():
     df.to_csv("results/dataset_splitted_info.csv", index=False)
 
     ##############################################################################
+    """
 
     with open("data/train_dataset.pkl", "rb") as f:
         train_dataset = pickle.load(f)
