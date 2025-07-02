@@ -36,7 +36,7 @@ def split_long_series_dataset(
             new_samples.append({
                 "target": sample["target"],
                 "item_id": sample["item_id"],
-                "start": new_start_time,
+                "start": sample["start"],
                 "freq": sample["freq"],
                 "dataset": sample["dataset"],
             })
@@ -79,10 +79,9 @@ def split_long_series_dataset(
 
                 try:
                     new_start_time = np.datetime64(start_time) + start_idx * freq
-                    new_start_time = str(new_start_time)
                 except Exception as e:
                     print(f"Skipping time shift at slice {i} for item {sample['item_id']} — reason: {e}")
-                    new_start_time = str(start_time)  # Fallback
+                    new_start_time = np.datetime64(start_time)  # fallback
 
                 new_samples.append({
                     "target": [[float(v)] for v in sliced_target[0]],
