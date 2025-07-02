@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import numpy as np
 from datasets import Dataset, Features, Sequence, Value
+from tqdm import tqdm
 
 
 def split_long_series_dataset(
@@ -19,12 +20,26 @@ def split_long_series_dataset(
 
     new_samples = []
 
-    for sample in indexed_dataset:
+    for sample in tqdm(indexed_dataset, desc="Splitting time series"):
         ts = np.array(sample["target"], dtype=np.float32)  # shape: (n_dims, time)
-        ts = np.stack(ts, axis=0)  # convert list of arrays to single array
+
+        # to univariate
+        if ts.ndim == 2 and ts.shape[0] > 1:
+            ts = ts[0:1]  # shape: (1, time)
+        elif ts.ndim == 1:
+            ts = ts[None, :]  # shape: (1, time)
 
         n_dims, ts_len = ts.shape
         num_slices = max((ts_len - total_length) // stride + 1, 0)
+
+        if num_slices == 0:
+            new_samples.append({
+                "target": sample["target"],
+                "item_id": sample["item_id"],
+                "start": new_start_time,
+                "freq": sample["freq"],
+                "dataset": sample["dataset"],
+            })
 
         for i in range(num_slices):
             start_idx = i * stride
@@ -62,24 +77,29 @@ def split_long_series_dataset(
             else:
                 freq = np.timedelta64(1, 'D')  # fallback
 
-            new_start_time = start_time + start_idx * freq
+            try:
+                new_start_time = np.datetime64(start_time) + start_idx * freq
+                new_start_time = str(new_start_time)
+            except Exception as e:
+                print(f"Skipping time shift at slice {i} for item {sample['item_id']} — reason: {e}")
+                new_start_time = str(start_time)  # Fallback
 
             new_samples.append({
-                "target": [dim.tolist() for dim in sliced_target],
+                "target": [[float(v)] for v in sliced_target[0]],
                 "item_id": sample["item_id"],
-                "start": str(new_start_time),
+                "start": new_start_time,
                 "freq": sample["freq"],
                 "dataset": sample["dataset"],
             })
 
     # define features
     features = Features({
-        "item_id": Value("string"),
-        "start": Value("timestamp[ns]"),
-        "freq": Value("string"),
-        "target": Sequence(Sequence(Value("float32"))),
-        "dataset": Value("string"),
-    })
+            "item_id": Value("string"),
+            "start": Value("timestamp[ns]"),
+            "freq": Value("string"),
+            "target": Sequence(Sequence(Value("float32"))),
+            "dataset": Value("string"),
+        })
 
     print(f"Created {len(new_samples)} sliced samples.")
     return Dataset.from_list(new_samples, features=features)

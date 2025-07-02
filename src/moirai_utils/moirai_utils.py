@@ -62,32 +62,38 @@ def to_timeseries_dataset(
         sample_time_series=sample_time_series, # SampleTimeSeriesType.NONE/UNIFORM/PROPORTIONAL
     )
 
-def get_train_and_val_datasets(dataset_path="data/moirai_dataset", yaml_path="data/datasets.yaml",
-        stratify_col="dataset", context_length=2048, prediction_length=256,
+def get_train_and_val_datasets(stratify_col="dataset", context_length=2048, prediction_length=256,
         test_size=TEST_SIZE, seed=RANDOM_SEED):
     # Check if datset are already loaded
-    if os.path.exists("data/moirai_dataset"):
-        print("Train and validation datasets already exist. Loading from disk...")
-        # Load train and validation data
-        indexed_dataset = Dataset.load_from_disk(dataset_path)
-    
-    elif os.path.exists("data/splitted_moirai_dataset"):
-        print("Splitted datasets already exist. Loading from disk...")
-        indexed_dataset = concatenate_moirai_datasets()
-        
+    if os.path.exists("data/moirai_dataset_splitted"):
+        indexed_dataset = Dataset.load_from_disk("data/moirai_dataset_splitted")
     else:
-        print("Train and validation datasets do not exist. Loading from YAML and splitting...")
-        # Load the full dataset from YAML
-        indexed_dataset = load_data(yaml_path=yaml_path)
-        # and save it to disk
-        save_train_and_val_datasets(yaml_path, dataset_path)
-    
-    # Split time series
-    indexed_dataset = split_long_series_dataset(
-        indexed_dataset,
-        context_length=context_length,
-        prediction_length=prediction_length
-        )
+        if os.path.exists("data/moirai_dataset"):
+            print("Train and validation datasets already exist. Loading from disk...")
+            # Load train and validation data
+            indexed_dataset = Dataset.load_from_disk("data/moirai_dataset")
+        
+        elif os.path.exists("data/splitted_moirai_dataset"):
+            print("Splitted datasets already exist. Loading from disk...")
+            indexed_dataset = concatenate_moirai_datasets()
+            
+        else:
+            print("Train and validation datasets do not exist. Loading from YAML and splitting...")
+            # Load the full dataset from YAML
+            indexed_dataset = load_data(yaml_path="data/datasets.yaml")
+            # and save it to disk
+            save_train_and_val_datasets("data/datasets.yaml", "data/moirai_dataset")
+        
+        # Split time series
+        indexed_dataset = split_long_series_dataset(
+            indexed_dataset,
+            context_length=context_length,
+            prediction_length=prediction_length
+            )
+
+        # Save splitted datasets to disk
+        os.makedirs("data", exist_ok=True)
+        indexed_dataset.save_to_disk("data/moirai_dataset_splitted")
 
     # Stratified split
     train_dataset, val_dataset = stratified_split(
