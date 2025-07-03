@@ -5,14 +5,13 @@ from datasets import Dataset
 
 
 def main():
-    """
     ds = Dataset.load_from_disk("data/moirai_dataset")
 
     def extract_info(example):
         target = example["target"]
         return {
-            "ts_len": len(target),
-            "num_variates": len(target[0]) if target else 0,
+            "num_variates": len(target),
+            "ts_len": len(target[0]) if target else 0,
         }
 
     ds = ds.map(extract_info, desc="Extracting time series info")
@@ -36,18 +35,18 @@ def main():
     split = []
 
     for sample in train_dataset.indexer.dataset.data["target"]:
-        ts_len.append(len(sample))
-        num_variates.append(len(sample[0]))
+        num_variates.append(len(sample))
+        ts_len.append(len(sample[0]))
         split.append("train")
     
     for sample in val_dataset.indexer.dataset.data["target"]:
-        ts_len.append(len(sample))
-        num_variates.append(len(sample[0]))
+        num_variates.append(len(sample))
+        ts_len.append(len(sample[0]))
         split.append("val")
     
     # compose df
-    df["ts_len"] = ts_len
     df["num_variates"] = num_variates
+    df["ts_len"] = ts_len
     df["split"] = split
 
     df.to_csv("results/dataset_train_val_info.csv")
@@ -59,16 +58,15 @@ def main():
     def extract_info(example):
         target = example["target"]
         return {
-            "ts_len": len(target),
-            "num_variates": len(target[0]) if target else 0,
-        }
+                "num_variates": len(target),
+                "ts_len": len(target[0]) if target else 0,
+            }
 
     ds = ds.map(extract_info, desc="Extracting time series info")
     df = ds.to_pandas()[["dataset", "item_id", "start", "freq", "ts_len", "num_variates"]]
     df.to_csv("results/dataset_splitted_info.csv", index=False)
 
     ##############################################################################
-    """
 
     with open("data/train_dataset.pkl", "rb") as f:
         train_dataset = pickle.load(f)
@@ -85,18 +83,18 @@ def main():
     split = []
 
     for sample in train_dataset.indexer.dataset.data["target"]:
-        ts_len.append(len(sample))
-        num_variates.append(len(sample[0]))
+        num_variates.append(len(sample))
+        ts_len.append(len(sample[0]))
         split.append("train")
     
     for sample in val_dataset.indexer.dataset.data["target"]:
-        ts_len.append(len(sample))
-        num_variates.append(len(sample[0]))
+        num_variates.append(len(sample))
+        ts_len.append(len(sample[0]))
         split.append("val")
     
     # compose df
-    df["ts_len"] = ts_len
     df["num_variates"] = num_variates
+    df["ts_len"] = ts_len
     df["split"] = split
 
     df.to_csv("results/dataset_splitted_train_val_info.csv")

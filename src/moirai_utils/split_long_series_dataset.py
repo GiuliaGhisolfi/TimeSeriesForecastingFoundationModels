@@ -47,46 +47,10 @@ def split_long_series_dataset(
 
                 sliced_target = ts[:, start_idx:end_idx]
 
-                # compute new timestamp
-                freq_str = sample["freq"]
-                start_time = sample["start"]
-
-                if isinstance(start_time, str):
-                    start_time = np.datetime64(start_time)
-
-                if "min" in freq_str:
-                    minutes = int(freq_str.split()[0])
-                    freq = np.timedelta64(minutes, 'm')
-                elif freq_str in ["H", "1H"]:
-                    freq = np.timedelta64(1, 'h')
-                elif freq_str == "6H":
-                    freq = np.timedelta64(6, 'h')
-                elif freq_str.upper().startswith("D"):
-                    freq = np.timedelta64(1, 'D')
-                elif freq_str.upper().startswith("W"):
-                    freq = np.timedelta64(7, 'D')
-                elif freq_str.upper().startswith("M"):
-                    freq = np.timedelta64(30, 'D')  # approx
-                elif freq_str.upper().startswith("Q"):
-                    freq = np.timedelta64(91, 'D')  # approx
-                elif freq_str.upper().startswith("A"):
-                    freq = np.timedelta64(365, 'D')  # approx
-                elif freq_str.upper().endswith("S"):
-                    # e.g., W-SUN
-                    freq = np.timedelta64(7, 'D')
-                else:
-                    freq = np.timedelta64(1, 'D')  # fallback
-
-                try:
-                    new_start_time = np.datetime64(start_time) + start_idx * freq
-                except Exception as e:
-                    print(f"Skipping time shift at slice {i} for item {sample['item_id']} — reason: {e}")
-                    new_start_time = np.datetime64(start_time)  # fallback
-
                 new_samples.append({
                     "target": [[float(v)] for v in sliced_target[0]],
                     "item_id": sample["item_id"],
-                    "start": new_start_time,
+                    "start": sample["start"],
                     "freq": sample["freq"],
                     "dataset": sample["dataset"],
                 })

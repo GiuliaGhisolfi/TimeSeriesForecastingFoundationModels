@@ -119,10 +119,10 @@ def train(
     )
 
     # Dataset
-    if data_from_splitted_files and os.path.exists("data/train_dataset_full_ts.pkl") and os.path.exists("data/val_dataset_full_ts.pkl"):
-        with open("data/train_dataset_full_ts.pkl", "rb") as f:
+    if data_from_splitted_files and os.path.exists("data/train_dataset.pkl") and os.path.exists("data/val_dataset.pkl"):
+        with open("data/train_dataset.pkl", "rb") as f:
             train_dataset = pickle.load(f)
-        with open("data/val_dataset_full_ts.pkl", "rb") as f:
+        with open("data/val_dataset.pkl", "rb") as f:
             val_dataset = pickle.load(f)
     else:
         train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)

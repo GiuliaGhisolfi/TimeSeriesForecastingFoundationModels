@@ -2,11 +2,14 @@ import argparse
 
 import pandas as pd
 import torch
-from autogluon.timeseries import ChronosModel, TimeSeriesDataFrame
+from autogluon.timeseries.dataset import \
+    TimeSeriesDataFrame  # ChronosFineTuningDataset
+from autogluon.timeseries.models import ChronosModel
 from datasets import Dataset
 from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 
-MODEL_NAME = "chronos-bolt-tiny" # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
+MODEL_PATH = "autogluon/chronos-bolt-tiny" # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
 EPOCHS = 10
 TEST_SIZE = 0.2
 PATIENCE = 3
@@ -15,7 +18,7 @@ RANDOM_SEED = 42
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def train(
-    model_name=MODEL_NAME,
+    model_path=MODEL_PATH,
     device=DEVICE,
     epochs=EPOCHS,
     patience=PATIENCE,
@@ -25,16 +28,20 @@ def train(
 ):
     # Load HuggingFace dataset from disk
     hf_dataset = Dataset.load_from_disk("data/moirai_dataset_splitted")
+    print("HuggingFace dataset loaded")
 
     # Convert HuggingFace dataset to pandas DataFrame
     rows = []
-    for entry in hf_dataset:
+    i = 0
+    for entry in tqdm(hf_dataset, desc="Preparing dataset"):
+        if i == 20: # FIXME
+            break
+
         item_id = entry["item_id"]
         start = pd.to_datetime(entry["start"])
         freq = entry["freq"]
+        freq = freq.replace("T", "min").replace("H", "h")
         target_values = entry["target"][0]  # outer sequence -> single time series
-        dataset_name = entry["dataset"]
-
         timestamps = pd.date_range(start=start, periods=len(target_values), freq=freq)
 
         for t, val in zip(timestamps, target_values):
@@ -42,33 +49,30 @@ def train(
                 "item_id": item_id,
                 "timestamp": t,
                 "target": val,
-                "dataset": dataset_name
             })
+
+        i += 1
 
     df = pd.DataFrame(rows)
 
     # Convert to AutoGluon TimeSeriesDataFrame
     ts_df = TimeSeriesDataFrame.from_data_frame(
         df,
-        id_column="item_id",
-        timestamp_column="timestamp"
     )
+    print("Dataset ready")
 
     # Define context and prediction lengths
     context_length = 2048
     prediction_length = 256
     min_required_length = context_length + prediction_length
 
-    # Remove filtering on length to include all series; 
-    # Chronos will handle padding internally
-
     # Split item_ids into train and validation sets (80/20 split)
     unique_ids = ts_df.item_ids
     train_ids, val_ids = train_test_split(unique_ids, test_size=test_size, random_state=RANDOM_SEED)
 
     # Select time series by ID
-    train_df = ts_df[ts_df.item_id.isin(train_ids)]
-    val_df = ts_df[ts_df.item_id.isin(val_ids)]
+    train_df = ts_df.loc[train_ids]
+    val_df = ts_df.loc[val_ids]
 
     # Calculate number of steps per epoch
     num_train_samples = len(train_df)
@@ -79,7 +83,7 @@ def train(
 
     # Initialize ChronosModel with fine-tuning, early stopping, and device set
     model = ChronosModel(
-        model=model_name,
+        model_path=model_path,
         context_length=context_length,
         prediction_length=prediction_length,
         fine_tune=True,
@@ -104,7 +108,7 @@ def train(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model_name", type=str, default=MODEL_NAME)
+    parser.add_argument("--model_path", type=str, default=MODEL_PATH)
     parser.add_argument("--epochs", type=int, default=EPOCHS)
     parser.add_argument("--patience", type=int, default=PATIENCE)
     parser.add_argument("--batch_size", type=int, default=16)
@@ -113,7 +117,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     train(
-        model_name=args.model_name,
+        model_path=args.model_path,
         epochs=args.epochs,
         patience=args.patience,
         batch_size=args.batch_size,
