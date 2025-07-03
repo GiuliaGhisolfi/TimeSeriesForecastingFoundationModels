@@ -21,15 +21,15 @@ def split_long_series_dataset(
     new_samples = []
 
     for sample in tqdm(indexed_dataset, desc="Splitting time series"):
-        ts = np.array(sample["target"], dtype=np.float32)  # shape: (n_dims, time)
+        ts = np.array(sample["target"], dtype=np.float32)  # shape: (time, n_dims)
 
         # to univariate
-        if ts.ndim == 2 and ts.shape[0] > 1:
-            ts = ts[0:1]  # shape: (1, time)
+        if ts.ndim == 2 and ts.shape[1] > 1:
+            ts = ts[:, 0]  # shape: (time, 1)
         elif ts.ndim == 1:
-            ts = ts[None, :]  # shape: (1, time)
+            ts = ts[:, None]  # shape: (time, 1)
 
-        n_dims, ts_len = ts.shape
+        ts_len, n_dims = ts.shape
         num_slices = max((ts_len - total_length) // stride + 1, 0)
 
         if num_slices == 0:
@@ -45,10 +45,10 @@ def split_long_series_dataset(
                 start_idx = i * stride
                 end_idx = start_idx + total_length
 
-                sliced_target = ts[:, start_idx:end_idx]
+                sliced_target = ts[start_idx:end_idx, :] # shape: (total_length, 1)
 
                 new_samples.append({
-                    "target": [[float(v)] for v in sliced_target[0]],
+                    "target": sliced_target.tolist(),
                     "item_id": sample["item_id"],
                     "start": sample["start"],
                     "freq": sample["freq"],

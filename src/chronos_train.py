@@ -9,7 +9,16 @@ from datasets import Dataset
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-MODEL_PATH = "autogluon/chronos-bolt-tiny" # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
+from uni2ts.loss.packed import PackedNLLLoss
+
+MODEL_NAME = "chronos-bolt-tiny" # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
+MODEL_MAP = {
+    "chronos-bolt-tiny": "autogluon/chronos-bolt-tiny",
+    "chronos-bolt-mini": "autogluon/chronos-bolt-mini",
+    "chronos-bolt-small": "autogluon/chronos-bolt-small",
+    "chronos-bolt-base": "autogluon/chronos-bolt-base",
+}
+
 EPOCHS = 10
 TEST_SIZE = 0.2
 PATIENCE = 3
@@ -18,13 +27,14 @@ RANDOM_SEED = 42
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def train(
-    model_path=MODEL_PATH,
+    model_name=MODEL_NAME,
     device=DEVICE,
     epochs=EPOCHS,
     patience=PATIENCE,
     test_size=TEST_SIZE,
     batch_size=16,
     learning_rate=1e-5,
+    #eval_metric=, (str) #TODO: ?
 ):
     # Load HuggingFace dataset from disk
     hf_dataset = Dataset.load_from_disk("data/moirai_dataset_splitted")
@@ -82,23 +92,31 @@ def train(
     total_fine_tune_steps = epochs * steps_per_epoch
 
     # Initialize ChronosModel with fine-tuning, early stopping, and device set
+    model_path = MODEL_MAP[model_name]
+
+    hyperparameters = {
+        "path": model_path,
+        "context_length": context_length,
+        "prediction_length": prediction_length,
+        "fine_tune": True,
+        "fine_tune_lr": learning_rate,
+        "fine_tune_steps": total_fine_tune_steps,
+        "fine_tune_batch_size": batch_size,
+        "eval_every_step": True,
+        "save_checkpoints": True,
+        "checkpoint_dir": "checkpoints/",
+        "early_stopping_patience": patience,
+        "device": device,
+    }
     model = ChronosModel(
-        model_path=model_path,
-        context_length=context_length,
+        name=model_name,
+        path=model_path,
         prediction_length=prediction_length,
-        fine_tune=True,
-        fine_tune_lr=learning_rate,
-        fine_tune_steps=total_fine_tune_steps,
-        fine_tune_batch_size=batch_size,
-        eval_every_step=True,
-        save_checkpoints=True,
-        checkpoint_dir="checkpoints/",
-        early_stopping_patience=patience,
-        device=device,
+        hyperparameters=hyperparameters,
     )
 
     # Fit the model with train and validation data
-    predictor = model.fit(
+    model.fit(
         train_data=train_df,
         tuning_data=val_df
     )
@@ -108,7 +126,7 @@ def train(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model_path", type=str, default=MODEL_PATH)
+    parser.add_argument("--model_name", type=str, default=MODEL_NAME)
     parser.add_argument("--epochs", type=int, default=EPOCHS)
     parser.add_argument("--patience", type=int, default=PATIENCE)
     parser.add_argument("--batch_size", type=int, default=16)
@@ -117,7 +135,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     train(
-        model_path=args.model_path,
+        model_path=args.model_name,
         epochs=args.epochs,
         patience=args.patience,
         batch_size=args.batch_size,

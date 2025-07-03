@@ -431,7 +431,28 @@ class DataLoader:
         """
         if num_batches_per_epoch is not None:
             assert cycle, "can only set 'num_batches_per_epoch' when 'cycle=True'"
+        
+        # FIXME: my code ########
+        loader_kwargs = dict(
+            dataset=dataset,
+            batch_size=int(batch_size * batch_size_factor),
+            shuffle=shuffle,
+            sampler=sampler,
+            num_workers=num_workers,
+            collate_fn=collate_fn,
+            pin_memory=pin_memory,
+            drop_last=False,
+            worker_init_fn=worker_init_fn,
+            persistent_workers=persistent_workers and num_workers > 0,
+        )
 
+        if num_workers > 0:
+            loader_kwargs["prefetch_factor"] = prefetch_factor
+        
+        self.dataloader = TorchDataLoader(**loader_kwargs)
+        #########################
+
+        """ # original code
         self.dataloader = TorchDataLoader(
             dataset=dataset,
             batch_size=int(batch_size * batch_size_factor),
@@ -445,6 +466,7 @@ class DataLoader:
             prefetch_factor=prefetch_factor if num_workers > 0 else None,
             persistent_workers=persistent_workers and num_workers > 0,
         )
+        """
         self.batch_size = batch_size
         self.cycle = cycle
         self.num_batches_per_epoch = num_batches_per_epoch
