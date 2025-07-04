@@ -23,11 +23,12 @@ def split_long_series_dataset(
     for sample in tqdm(indexed_dataset, desc="Splitting time series"):
         ts = np.array(sample["target"], dtype=np.float32)  # shape: (time, n_dims)
 
-        # to univariate
-        if ts.ndim == 2 and ts.shape[1] > 1:
-            ts = ts[:, 0]  # shape: (time, 1)
-        elif ts.ndim == 1:
-            ts = ts[:, None]  # shape: (time, 1)
+        if ts.ndim == 1:
+            ts = ts[:, None] # shape: (time, 1)
+        elif ts.ndim == 2 and ts.shape[1] > 1:
+            ts = ts[:, :1]  # shape: (time, 1)
+        elif ts.ndim == 2 and ts.shape[1] == 1:
+            pass
 
         ts_len, n_dims = ts.shape
         num_slices = max((ts_len - total_length) // stride + 1, 0)
