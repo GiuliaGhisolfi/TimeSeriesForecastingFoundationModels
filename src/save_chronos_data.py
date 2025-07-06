@@ -1,0 +1,51 @@
+from collections import defaultdict
+
+import numpy as np
+import pandas as pd
+from datasets import load_from_disk
+from tqdm import tqdm
+
+
+def pad_series(ts, required_len):
+    pad_len = required_len - len(ts)
+    if pad_len > 0:
+        padding = [np.nan] * pad_len
+        ts = padding + list(ts)
+    return ts
+
+def hf_to_dataframe(hf_dataset, min_required_length):
+    data = defaultdict(list)
+
+    for entry in tqdm(hf_dataset, desc="Preparing dataset"):
+        item_id = entry["item_id"]
+        start = pd.to_datetime(entry["start"])
+        freq = entry["freq"].replace("T", "min").replace("H", "h")
+
+        values = pad_series(entry["target"][0], min_required_length)
+        timestamps = pd.date_range(start=start, periods=len(values), freq=freq)
+
+        data["item_id"].extend([item_id] * len(values))
+        data["timestamp"].extend(timestamps)
+        data["target"].extend(values)
+
+    return pd.DataFrame(data)
+
+def main():
+    context_length = 512 #2048
+    prediction_length = 256
+    num_chunks = 8
+
+    for i in range(3, num_chunks):
+        print(f"Processing split_part_{i}.arrow")
+
+        # Load HuggingFace dataset from disk
+        dataset = load_from_disk(f"data/split_part_{i}.arrow")
+        
+        # Convert HuggingFace dataset to pandas DataFrame
+        df = hf_to_dataframe(dataset, min_required_length=context_length+prediction_length)
+        df.to_parquet(f"data/chronos_parquet_splits/split_{i}.parquet", index=False)
+    
+    print("Done :)")
+
+if __name__ == "__main__":
+    main()
