@@ -2,8 +2,7 @@ import os
 from datetime import timedelta
 
 import numpy as np
-from datasets import (Dataset, Features, Sequence, Value, concatenate_datasets,
-                      load_from_disk)
+from datasets import Dataset, Features, Sequence, Value
 from tqdm import tqdm
 
 
@@ -20,9 +19,6 @@ def split_long_series_dataset(
     stride = stride or prediction_length  # overlap by default
 
     new_samples = []
-    samples_count = 0
-    chunk_size = 100000
-    num_chunks = 0
 
     # define features
     features = Features({
@@ -54,7 +50,6 @@ def split_long_series_dataset(
                 "freq": sample["freq"],
                 "dataset": sample["dataset"],
             })
-            samples_count += 1
         else:
             for i in range(num_slices):
                 start_idx = i * stride
@@ -69,29 +64,8 @@ def split_long_series_dataset(
                     "freq": sample["freq"],
                     "dataset": sample["dataset"],
                 })
-                samples_count += 1
-
-        if samples_count >= chunk_size:
-            dataset_chunk = Dataset.from_list(new_samples, features=features)
-            dataset_chunk.save_to_disk(f"data/split_part_{num_chunks}.arrow")
-
-            samples_count = 0
-            num_chunks += 1
-            new_samples = []
-
-    if samples_count != 0:
-        dataset_chunk = Dataset.from_list(new_samples, features=features)
-        dataset_chunk.save_to_disk(f"data/split_part_{num_chunks}.arrow")
-        num_chunks += 1
 
     print(f"Created {len(new_samples)} sliced samples.")
-
-    # Save dataset
-    all_chunks = [load_from_disk(f"data/split_part_{i}.arrow") for i in range(num_chunks)]
-    full_dataset = concatenate_datasets(all_chunks)
-    #full_dataset.save_to_disk("data/final_split_dataset")
-
-    """for i in range(num_chunks):
-        os.system(f"rm -rf data/split_part_{i}.arrow")"""
+    full_dataset = Dataset.from_list(new_samples, features=features)
 
     return full_dataset
