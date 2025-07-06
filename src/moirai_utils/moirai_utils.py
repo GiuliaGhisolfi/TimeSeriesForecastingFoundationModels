@@ -2,7 +2,8 @@ import os
 import random
 
 import torch
-from datasets import Dataset
+from datasets import Dataset, concatenate_datasets, load_from_disk
+from tqdm import tqdm
 
 from compose_moirai_dataset import concatenate_moirai_datasets
 from moirai_utils.load_moirai_data import load_data
@@ -23,29 +24,56 @@ def pad_bool_tensor(shape, dtype=torch.bool):
 def pad_int_tensor(shape, pad_value=-1, dtype=torch.long):
     return torch.full(shape, pad_value, dtype=dtype)
 
-def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED):
+import os
+
+from datasets import Dataset
+
+
+def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=100_000):
+    os.makedirs("data/tmp_train", exist_ok=True)
+    os.makedirs("data/tmp_val", exist_ok=True)
+
     print(f"Stratified split with test size: {test_size}, seed: {seed}")
     groups = {}
-    for row in dataset:
+    for row in tqdm(dataset, desc="Stratified split"):
         key = row[stratify_col]
         groups.setdefault(key, []).append(row)
 
-    train_splits, val_splits = [], []
     rng = random.Random(seed)
+    train_chunk, val_chunk = [], []
+    train_idx = val_idx = 0
 
-    print(f"Number of groups: {len(groups)}")
-    for group_rows in groups.values():
-        print(f"Processing group: {group_rows[0][stratify_col]} with {len(group_rows)} rows")
+    for group_rows in tqdm(groups.values(), desc="Processing"):
         rng.shuffle(group_rows)
         n_val = int(len(group_rows) * test_size)
-        val_splits.extend(group_rows[:n_val])
-        train_splits.extend(group_rows[n_val:])
+        val_chunk.extend(group_rows[:n_val])
+        train_chunk.extend(group_rows[n_val:])
 
-    #return train_splits, val_splits
-    train_dataset = Dataset.from_list(train_splits, features=dataset.features)
-    val_dataset = Dataset.from_list(val_splits, features=dataset.features)
+        # Scrivi su disco quando si raggiunge il chunk_size
+        if len(train_chunk) >= chunk_size:
+            Dataset.from_list(train_chunk, features=dataset.features).save_to_disk(f"data/tmp_train/chunk_{train_idx}")
+            train_chunk = []
+            train_idx += 1
+
+        if len(val_chunk) >= chunk_size:
+            Dataset.from_list(val_chunk, features=dataset.features).save_to_disk(f"data/tmp_val/chunk_{val_idx}")
+            val_chunk = []
+            val_idx += 1
+
+    # Salva gli ultimi chunk se non vuoti
+    if train_chunk:
+        Dataset.from_list(train_chunk, features=dataset.features).save_to_disk(f"data/tmp_train/chunk_{train_idx}")
+    if val_chunk:
+        Dataset.from_list(val_chunk, features=dataset.features).save_to_disk(f"data/tmp_val/chunk_{val_idx}")
+
+    # Ricarica tutto da disco
+    train_datasets = [load_from_disk(f"data/tmp_train/chunk_{i}") for i in range(train_idx + 1)]
+    val_datasets = [load_from_disk(f"data/tmp_val/chunk_{i}") for i in range(val_idx + 1)]
+
+    train_dataset = concatenate_datasets(train_datasets)
+    val_dataset = concatenate_datasets(val_datasets)
+
     print(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
-
     return train_dataset, val_dataset
 
 def to_timeseries_dataset(
@@ -65,11 +93,17 @@ def to_timeseries_dataset(
 def get_train_and_val_datasets(stratify_col="dataset", context_length=2048, prediction_length=256,
         test_size=TEST_SIZE, seed=RANDOM_SEED):
     # Check if datset are already loaded
-    if os.path.exists("data/moirai_dataset_splitted"):
-        indexed_dataset = Dataset.load_from_disk("data/moirai_dataset_splitted")
+    if os.path.exists("data/final_split_dataset"):
+        print("Loading from disk...")
+        indexed_dataset = Dataset.load_from_disk("data/final_split_dataset")
+    elif all(os.path.exists(f"data/split_part_{i}.arrow") for i in range(8)):
+        print("Concatenate dataset...")
+        num_chunks = 8
+        all_chunks = [load_from_disk(f"data/split_part_{i}.arrow") for i in range(num_chunks)]
+        indexed_dataset = concatenate_datasets(all_chunks)
     else:
         if os.path.exists("data/moirai_dataset"):
-            print("Train and validation datasets already exist. Loading from disk...")
+            print("Indexed datasets already exist. Loading from disk...")
             # Load train and validation data
             indexed_dataset = Dataset.load_from_disk("data/moirai_dataset")
         
@@ -90,10 +124,6 @@ def get_train_and_val_datasets(stratify_col="dataset", context_length=2048, pred
             context_length=context_length,
             prediction_length=prediction_length
             )
-
-        # Save splitted datasets to disk
-        os.makedirs("data", exist_ok=True)
-        indexed_dataset.save_to_disk("data/moirai_dataset_splitted")
 
     # Stratified split
     train_dataset, val_dataset = stratified_split(

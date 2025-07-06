@@ -55,7 +55,7 @@ def main():
     ##############################################################################
     """
 
-    ds = Dataset.load_from_disk("data/moirai_dataset_splitted")
+    ds = Dataset.load_from_disk("data/final_split_dataset")
 
     def extract_info(example):
         target = example["target"]

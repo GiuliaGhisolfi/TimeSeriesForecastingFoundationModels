@@ -1,15 +1,16 @@
 import argparse
+import os
+from collections import defaultdict
 
+import numpy as np
 import pandas as pd
 import torch
 from autogluon.timeseries.dataset import \
     TimeSeriesDataFrame  # ChronosFineTuningDataset
 from autogluon.timeseries.models import ChronosModel
-from datasets import Dataset
+from datasets import Dataset, concatenate_datasets, load_from_disk
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-
-from uni2ts.loss.packed import PackedNLLLoss
 
 MODEL_NAME = "chronos-bolt-tiny" # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
 MODEL_MAP = {
@@ -26,6 +27,30 @@ RANDOM_SEED = 42
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+def pad_series(ts, required_len):
+    pad_len = required_len - len(ts)
+    if pad_len > 0:
+        padding = [np.nan] * pad_len
+        ts = padding + list(ts)
+    return ts
+
+def hf_to_dataframe(hf_dataset, min_required_length):
+    data = defaultdict(list)
+
+    for entry in tqdm(hf_dataset, desc="Preparing dataset"):
+        item_id = entry["item_id"]
+        start = pd.to_datetime(entry["start"])
+        freq = entry["freq"].replace("T", "min").replace("H", "h")
+
+        values = pad_series(entry["target"][0], min_required_length)
+        timestamps = pd.date_range(start=start, periods=len(values), freq=freq)
+
+        data["item_id"].extend([item_id] * len(values))
+        data["timestamp"].extend(timestamps)
+        data["target"].extend(values)
+
+    return pd.DataFrame(data)
+
 def train(
     model_name=MODEL_NAME,
     device=DEVICE,
@@ -35,46 +60,34 @@ def train(
     batch_size=16,
     learning_rate=1e-5,
     #eval_metric=, (str) #TODO: ?
-):
-    # Load HuggingFace dataset from disk
-    hf_dataset = Dataset.load_from_disk("data/moirai_dataset_splitted")
-    print("HuggingFace dataset loaded")
+    ):
 
-    # Convert HuggingFace dataset to pandas DataFrame
-    rows = []
-    i = 0
-    for entry in tqdm(hf_dataset, desc="Preparing dataset"):
-        if i == 20: # FIXME
-            break
-
-        item_id = entry["item_id"]
-        start = pd.to_datetime(entry["start"])
-        freq = entry["freq"]
-        freq = freq.replace("T", "min").replace("H", "h")
-        target_values = entry["target"][0]  # outer sequence -> single time series
-        timestamps = pd.date_range(start=start, periods=len(target_values), freq=freq)
-
-        for t, val in zip(timestamps, target_values):
-            rows.append({
-                "item_id": item_id,
-                "timestamp": t,
-                "target": val,
-            })
-
-        i += 1
-
-    df = pd.DataFrame(rows)
-
-    # Convert to AutoGluon TimeSeriesDataFrame
-    ts_df = TimeSeriesDataFrame.from_data_frame(
-        df,
-    )
-    print("Dataset ready")
-
-    # Define context and prediction lengths
-    context_length = 2048
+    context_length = 512 #2048
     prediction_length = 256
-    min_required_length = context_length + prediction_length
+    num_chunks = 8
+
+    if not all(os.path.exists(f"data/chronos_parquet_splits/split_{i}.parquet") for i in range(num_chunks)):
+        os.makedirs("data/chronos_parquet_splits", exist_ok=True)
+
+        for i in range(num_chunks):
+            print(f"Processing split_part_{i}.arrow")
+
+            # Load HuggingFace dataset from disk
+            dataset = load_from_disk(f"data/split_part_{i}.arrow")
+            
+            # Convert HuggingFace dataset to pandas DataFrame
+            df = hf_to_dataframe(dataset, min_required_length=context_length+prediction_length)
+            df.to_parquet(f"data/chronos_parquet_splits/split_{i}.parquet", index=False)
+
+    # Concatenate all datasets
+    df_list = [
+        pd.read_parquet(f"data/chronos_parquet_splits/split_{i}.parquet")
+        for i in range(num_chunks)
+    ]
+    full_df = pd.concat(df_list, ignore_index=True)
+
+    ts_df = TimeSeriesDataFrame(full_df)
+    print("Dataset ready")
 
     # Split item_ids into train and validation sets (80/20 split)
     unique_ids = ts_df.item_ids
@@ -114,12 +127,14 @@ def train(
         prediction_length=prediction_length,
         hyperparameters=hyperparameters,
     )
+    print("Model loaded.")
+    print(model)
 
     # Fit the model with train and validation data
-    model.fit(
+    """model.fit(
         train_data=train_df,
         tuning_data=val_df
-    )
+    )"""
 
     print("Training complete.")
 
@@ -135,7 +150,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     train(
-        model_path=args.model_name,
+        model_name=args.model_name,
         epochs=args.epochs,
         patience=args.patience,
         batch_size=args.batch_size,

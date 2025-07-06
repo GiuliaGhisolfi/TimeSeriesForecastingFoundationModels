@@ -18,28 +18,28 @@ autogluon/chronos_datasets:
     #- solar_1h
     - taxi_1h
     #- taxi_30min
-    - training_corpus_kernel_synth_1m # 10M TSMixup augmentations of real-world data
-    - training_corpus_tsmixup_10m # 1M synthetic time series generated with KernelSynth
+    #- training_corpus_kernel_synth_1m # 10M TSMixup augmentations of real-world data
+    #- training_corpus_tsmixup_10m # 1M synthetic time series generated with KernelSynth
     #- uber_tlc_daily
     #- uber_tlc_hourly
-    - ushcn_daily
-    - weatherbench_daily
-    - weatherbench_hourly_10m_u_component_of_wind
-    - weatherbench_hourly_10m_v_component_of_wind
-    - weatherbench_hourly_2m_temperature
-    - weatherbench_hourly_geopotential
-    - weatherbench_hourly_potential_vorticity
-    - weatherbench_hourly_relative_humidity
-    - weatherbench_hourly_specific_humidity
-    - weatherbench_hourly_temperature
-    - weatherbench_hourly_toa_incident_solar_radiation
-    - weatherbench_hourly_total_cloud_cover
-    - weatherbench_hourly_total_precipitation
-    - weatherbench_hourly_u_component_of_wind
-    - weatherbench_hourly_v_component_of_wind
-    - weatherbench_hourly_vorticity
-    - weatherbench_weekly
-    - wiki_daily_100k
+    #- ushcn_daily
+    #- weatherbench_daily
+    #- weatherbench_hourly_10m_u_component_of_wind
+    #- weatherbench_hourly_10m_v_component_of_wind
+    #- weatherbench_hourly_2m_temperature
+    #- weatherbench_hourly_geopotential
+    #- weatherbench_hourly_potential_vorticity
+    #- weatherbench_hourly_relative_humidity
+    #- weatherbench_hourly_specific_humidity
+    #- weatherbench_hourly_temperature
+    #- weatherbench_hourly_toa_incident_solar_radiation
+    #- weatherbench_hourly_total_cloud_cover
+    #- weatherbench_hourly_total_precipitation
+    #- weatherbench_hourly_u_component_of_wind
+    #- weatherbench_hourly_v_component_of_wind
+    #- weatherbench_hourly_vorticity
+    #- weatherbench_weekly
+    #- wiki_daily_100k
     #- wind_farms_daily
     #- wind_farms_hourly
 
@@ -105,21 +105,21 @@ Salesforce/lotsa_data :
     - cmip6_1925
     - cmip6_1930
     - cmip6_1935
-    - cmip6_1940
-    - cmip6_1945
-    - cmip6_1950
-    - cmip6_1955
-    - cmip6_1960
-    - cmip6_1965
-    - cmip6_1970
-    - cmip6_1975
-    - cmip6_1980
-    - cmip6_1985
-    - cmip6_1990
-    - cmip6_1995
-    - cmip6_2000
-    - cmip6_2005
-    - cmip6_2010
+    #- cmip6_1940
+    #- cmip6_1945
+    #- cmip6_1950
+    #- cmip6_1955
+    #- cmip6_1960
+    #- cmip6_1965
+    #- cmip6_1970
+    #- cmip6_1975
+    #- cmip6_1980
+    #- cmip6_1985
+    #- cmip6_1990
+    #- cmip6_1995
+    #- cmip6_2000
+    #- cmip6_2005
+    #- cmip6_2010
     - cockatoo
     - covid19_energy
     - covid_deaths
@@ -143,20 +143,20 @@ Salesforce/lotsa_data :
     - era5_2002
     - era5_2003
     - era5_2004
-    - era5_2005
-    - era5_2006
-    - era5_2007
-    - era5_2008
-    - era5_2009
-    - era5_2010
-    - era5_2011
-    - era5_2012
-    - era5_2013
-    - era5_2014
-    - era5_2015
-    - era5_2016
-    - era5_2017
-    - era5_2018
+    #- era5_2005
+    #- era5_2006
+    #- era5_2007
+    #- era5_2008
+    #- era5_2009
+    #- era5_2010
+    #- era5_2011
+    #- era5_2012
+    #- era5_2013
+    #- era5_2014
+    #- era5_2015
+    #- era5_2016
+    #- era5_2017
+    #- era5_2018
     - extended_web_traffic_with_missing
     - favorita_sales
     - favorita_transactions

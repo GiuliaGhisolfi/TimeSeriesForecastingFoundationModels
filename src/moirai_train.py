@@ -40,25 +40,25 @@ def move_batch_to_device(batch, device):
     return tree_map(lambda x: x.to(device) if isinstance(x, torch.Tensor) else x, batch)
 
 def train(
-        model_name=MODEL_NAME,
-        device_map=DEVICE_MAP,
-        epochs=EPOCHS,
-        patience=PATIENCE,
-        data_from_splitted_files=True,
-        test_size=TEST_SIZE,
-        batch_size=2,
-        max_sequence_length=None,#1024,
-        min_patches=16,
-        min_mask_ratio=0.2,
-        max_mask_ratio=0.5,
-        max_dim=1024,
-        beta1=0.9,
-        beta2=0.98,
-        loss_func=PackedNLLLoss(),
-        val_metric=PackedNLLLoss(),
-        learning_rate=1e-5, # default: 1e-3
-        weight_decay=1e-2
-        ):
+    model_name=MODEL_NAME,
+    device_map=DEVICE_MAP,
+    epochs=EPOCHS,
+    patience=PATIENCE,
+    data_from_splitted_files=True,
+    test_size=TEST_SIZE,
+    batch_size=2,
+    max_sequence_length=None,#1024,
+    min_patches=16,
+    min_mask_ratio=0.2,
+    max_mask_ratio=0.5,
+    max_dim=1024,
+    beta1=0.9,
+    beta2=0.98,
+    loss_func=PackedNLLLoss(),
+    val_metric=PackedNLLLoss(),
+    learning_rate=1e-5, # default: 1e-3
+    weight_decay=1e-2
+    ):
     print(f"Using device: {device_map}")
 
     # Model
