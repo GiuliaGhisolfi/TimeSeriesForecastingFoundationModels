@@ -13,29 +13,40 @@ def pad_series(ts, required_len):
         ts = padding + list(ts)
     return ts
 
-def hf_to_dataframe(hf_dataset, min_required_length):
-    data = defaultdict(list)
-
-    for entry in tqdm(hf_dataset, desc="Preparing dataset"):
+def hf_to_dataframe(dataset, min_required_length):
+    rows = []
+    for entry in tqdm(dataset, desc="Preparing dataset"):
         item_id = entry["item_id"]
-        start = pd.to_datetime(entry["start"])
-        freq = entry["freq"].replace("T", "min").replace("H", "h")
+        start = pd.to_datetime(entry["start"], errors="coerce")  # Coerce invalid
+        freq = entry["freq"].replace("T", "min").replace("H", "h")  # Standardize
+
+        # Skip rows with invalid start
+        if pd.isna(start):
+            continue
 
         values = pad_series(entry["target"][0], min_required_length)
-        timestamps = pd.date_range(start=start, periods=len(values), freq=freq)
 
-        data["item_id"].extend([item_id] * len(values))
-        data["timestamp"].extend(timestamps)
-        data["target"].extend(values)
+        try:
+            timestamps = pd.date_range(start=start, periods=len(values), freq=freq)
+        except (pd.errors.OutOfBoundsDatetime, OverflowError):
+            print(f"Skipping entry with item_id={item_id}, start={start}, freq={freq}")
+            continue
 
-    return pd.DataFrame(data)
+        for t, val in zip(timestamps, values):
+            rows.append({
+                "item_id": item_id,
+                "timestamp": t,
+                "target": val,
+            })
+
+    return pd.DataFrame(rows)
 
 def main():
     context_length = 512 #2048
     prediction_length = 256
     num_chunks = 8
 
-    for i in range(3, num_chunks):
+    for i in range(6, num_chunks):
         print(f"Processing split_part_{i}.arrow")
 
         # Load HuggingFace dataset from disk

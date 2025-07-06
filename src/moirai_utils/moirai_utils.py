@@ -1,6 +1,9 @@
+import copy
+import json
 import os
 import random
 
+import pandas as pd
 import torch
 from datasets import Dataset, concatenate_datasets, load_from_disk
 from tqdm import tqdm
@@ -24,32 +27,49 @@ def pad_bool_tensor(shape, dtype=torch.bool):
 def pad_int_tensor(shape, pad_value=-1, dtype=torch.long):
     return torch.full(shape, pad_value, dtype=dtype)
 
-import os
+def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED):
+    print(f"Stratified split with test size: {test_size}, seed: {seed}")
 
-from datasets import Dataset
+    os.makedirs("data/grouped", exist_ok=True)
+    groups_files = {}
 
+    for row in tqdm(dataset, desc="Writing per group"):
+        key = row[stratify_col]
+        safe_key = key.replace("/", "_")
+        path = f"data/grouped/{safe_key}.jsonl"
 
-def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=100_000):
+        if key not in groups_files:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            groups_files[key] = open(path, "a")
+
+        row_copy = copy.deepcopy(row)
+        for k, v in row_copy.items():
+            if isinstance(v, pd.Timestamp):
+                row_copy[k] = v.isoformat()
+
+        json.dump(row_copy, groups_files[key])
+        groups_files[key].write("\n")
+
+    for f in groups_files.values():
+        f.close()
+
     os.makedirs("data/tmp_train", exist_ok=True)
     os.makedirs("data/tmp_val", exist_ok=True)
 
-    print(f"Stratified split with test size: {test_size}, seed: {seed}")
-    groups = {}
-    for row in tqdm(dataset, desc="Stratified split"):
-        key = row[stratify_col]
-        groups.setdefault(key, []).append(row)
+    train_idx = val_idx = 0
+    train_chunk, val_chunk = [], []
+    chunk_size = 100000
 
     rng = random.Random(seed)
-    train_chunk, val_chunk = [], []
-    train_idx = val_idx = 0
 
-    for group_rows in tqdm(groups.values(), desc="Processing"):
-        rng.shuffle(group_rows)
-        n_val = int(len(group_rows) * test_size)
-        val_chunk.extend(group_rows[:n_val])
-        train_chunk.extend(group_rows[n_val:])
+    for filename in os.listdir("data/grouped"):
+        with open(f"data/grouped/{filename}") as f:
+            rows = [json.loads(line) for line in f]
+        rng.shuffle(rows)
+        n_val = int(len(rows) * test_size)
+        val_chunk.extend(rows[:n_val])
+        train_chunk.extend(rows[n_val:])
 
-        # Scrivi su disco quando si raggiunge il chunk_size
         if len(train_chunk) >= chunk_size:
             Dataset.from_list(train_chunk, features=dataset.features).save_to_disk(f"data/tmp_train/chunk_{train_idx}")
             train_chunk = []
@@ -60,13 +80,12 @@ def stratified_split(dataset, stratify_col="dataset", test_size=TEST_SIZE, seed=
             val_chunk = []
             val_idx += 1
 
-    # Salva gli ultimi chunk se non vuoti
     if train_chunk:
         Dataset.from_list(train_chunk, features=dataset.features).save_to_disk(f"data/tmp_train/chunk_{train_idx}")
     if val_chunk:
         Dataset.from_list(val_chunk, features=dataset.features).save_to_disk(f"data/tmp_val/chunk_{val_idx}")
 
-    # Ricarica tutto da disco
+    # Concatenate all datas
     train_datasets = [load_from_disk(f"data/tmp_train/chunk_{i}") for i in range(train_idx + 1)]
     val_datasets = [load_from_disk(f"data/tmp_val/chunk_{i}") for i in range(val_idx + 1)]
 
