@@ -1,5 +1,7 @@
 import argparse
+import json
 import os
+import time
 from collections import defaultdict
 
 import numpy as np
@@ -68,14 +70,14 @@ def train(
     epochs=EPOCHS,
     patience=PATIENCE,
     test_size=TEST_SIZE,
-    batch_size=16,
+    batch_size=2,
     learning_rate=1e-5,
     #eval_metric=, (str) #TODO: ?
     ):
 
-    context_length = 512 #2048
-    prediction_length = 256
-    num_chunks = 8
+    context_length = 256 #2048
+    prediction_length = 64 #256
+    num_chunks = 7 #8 #FIXME: non è tutto il dataset
 
     if not all(os.path.exists(f"data/chronos_parquet_splits/split_{i}.parquet") for i in range(num_chunks)):
         os.makedirs("data/chronos_parquet_splits", exist_ok=True)
@@ -131,6 +133,11 @@ def train(
         "checkpoint_dir": "checkpoints/",
         "early_stopping_patience": patience,
         "device": device,
+        "logging_strategy": "steps",
+        "logging_steps": 50,  # stampa ogni n step
+        "report_to": "none",
+        "disable_tqdm": False,
+        "verbose": True,
     }
     model = ChronosModel(
         name=model_name,
@@ -139,15 +146,52 @@ def train(
         hyperparameters=hyperparameters,
     )
     print("Model loaded.")
-    print(model)
+
+    print("CUDA_VISIBLE_DEVICES:", os.environ.get("CUDA_VISIBLE_DEVICES"))
 
     # Fit the model with train and validation data
-    """model.fit(
+    print(">> START TRAINING ...")
+    start_time = time.time()
+
+    model.fit(
         train_data=train_df,
         tuning_data=val_df
-    )"""
+    )
 
-    print("Training complete.")
+    end_time = time.time()
+    total_time = end_time - start_time
+    print(f"Training complete in {total_time:.2f} seconds.")
+
+    if hasattr(model.model, "trainer"):
+        log_history = model.model.trainer.state.log_history
+        train_losses = []
+        val_losses = []
+        epoch_times = []
+
+        last_time = start_time
+        for log in log_history:
+            if "loss" in log:
+                train_losses.append(log["loss"])
+            if "eval_loss" in log:
+                val_losses.append(log["eval_loss"])
+            if "epoch" in log:
+                now = time.time()
+                epoch_times.append(now - last_time)
+                last_time = now
+
+        # Save to file
+        with open(f"results/{model_name}_training_logs.json", "w") as f:
+            json.dump({
+                "train_loss": train_losses,
+                "val_loss": val_losses,
+                "epoch_times": epoch_times,
+                "total_time_sec": total_time
+            }, f, indent=2)
+
+        print("Training logs saved to training_logs.json")
+    else:
+        print("Trainer logs not found; could not record loss or times.")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -155,7 +199,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, default=MODEL_NAME)
     parser.add_argument("--epochs", type=int, default=EPOCHS)
     parser.add_argument("--patience", type=int, default=PATIENCE)
-    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--batch_size", type=int, default=2)
     parser.add_argument("--learning_rate", type=float, default=1e-5)
 
     args = parser.parse_args()

@@ -1,5 +1,4 @@
 __pycache__
-data/moirai_dataset
 data/splitted_moirai_dataset
-data/full_datasets.zip
+data/splitted_moirai_dataset.zip
 checkpoints
