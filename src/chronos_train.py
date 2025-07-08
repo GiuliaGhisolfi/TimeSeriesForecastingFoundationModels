@@ -4,6 +4,7 @@ import os
 import time
 from collections import defaultdict
 
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 import torch
@@ -38,7 +39,10 @@ def pad_series(ts, required_len):
 
 def hf_to_dataframe(dataset, min_required_length):
     rows = []
+    i = 0
     for entry in tqdm(dataset, desc="Preparing dataset"):
+        if i == 10:
+            break
         item_id = entry["item_id"]
         start = pd.to_datetime(entry["start"], errors="coerce")  # Coerce invalid
         freq = entry["freq"].replace("T", "min").replace("H", "h")  # Standardize
@@ -56,11 +60,13 @@ def hf_to_dataframe(dataset, min_required_length):
             continue
 
         for t, val in zip(timestamps, values):
-            rows.append({
-                "item_id": item_id,
-                "timestamp": t,
-                "target": val,
-            })
+            if val != None:
+                rows.append({
+                    "item_id": item_id,
+                    "timestamp": t,
+                    "target": np.array([val], dtype=np.float32),
+                })
+        i += 1
 
     return pd.DataFrame(rows)
 
@@ -77,9 +83,10 @@ def train(
 
     context_length = 256 #2048
     prediction_length = 64 #256
+
     num_chunks = 7 #8 #FIXME: non è tutto il dataset
 
-    if not all(os.path.exists(f"data/chronos_parquet_splits/split_{i}.parquet") for i in range(num_chunks)):
+    if not all(os.path.exists(f"data/chronos_parquet_splits/split_{i}.parquet") for i in range(6, num_chunks)):
         os.makedirs("data/chronos_parquet_splits", exist_ok=True)
 
         for i in range(num_chunks):
@@ -87,7 +94,7 @@ def train(
 
             # Load HuggingFace dataset from disk
             dataset = load_from_disk(f"data/split_part_{i}.arrow")
-            
+
             # Convert HuggingFace dataset to pandas DataFrame
             df = hf_to_dataframe(dataset, min_required_length=context_length+prediction_length)
             df.to_parquet(f"data/chronos_parquet_splits/split_{i}.parquet", index=False)
@@ -98,12 +105,25 @@ def train(
         for i in range(num_chunks)
     ]
     full_df = pd.concat(df_list, ignore_index=True)
+    full_df = full_df.dropna(subset=["target"])
+    full_df["target"] = full_df["target"].apply(lambda x: np.array(x, dtype=np.float32))
+
+    #full_df = dd.read_parquet("data/chronos_parquet_splits/*.parquet").compute()
+
+    """
+    ds = Dataset.load_from_disk("data/moirai_dataset")
+    full_df = hf_to_dataframe(ds, min_required_length=context_length+prediction_length)
+    """
 
     ts_df = TimeSeriesDataFrame(full_df)
     print("Dataset ready")
 
     # Split item_ids into train and validation sets (80/20 split)
     unique_ids = ts_df.item_ids
+    #unique_ids = ts_df.item_ids.unique().to_numpy().tolist()
+    print(f"[DEBUG] unique_ids type: {type(unique_ids)}")
+    print(f"[DEBUG] First 5 IDs: {unique_ids[:5]}")
+    print(f"[DEBUG] Number of IDs: {len(unique_ids)}")
     train_ids, val_ids = train_test_split(unique_ids, test_size=test_size, random_state=RANDOM_SEED)
 
     # Select time series by ID
@@ -125,6 +145,9 @@ def train(
         "context_length": context_length,
         "prediction_length": prediction_length,
         "fine_tune": True,
+        "fine_tune_trainer_kwargs": {
+            "optim": "adamw_torch",
+        },
         "fine_tune_lr": learning_rate,
         "fine_tune_steps": total_fine_tune_steps,
         "fine_tune_batch_size": batch_size,
@@ -132,7 +155,7 @@ def train(
         "save_checkpoints": True,
         "checkpoint_dir": "checkpoints/",
         "early_stopping_patience": patience,
-        "device": device,
+        "device": "auto",
         "logging_strategy": "steps",
         "logging_steps": 50,  # stampa ogni n step
         "report_to": "none",
@@ -148,6 +171,7 @@ def train(
     print("Model loaded.")
 
     print("CUDA_VISIBLE_DEVICES:", os.environ.get("CUDA_VISIBLE_DEVICES"))
+    print("PyTorch sees CUDA:", torch.cuda.is_available())
 
     # Fit the model with train and validation data
     print(">> START TRAINING ...")
