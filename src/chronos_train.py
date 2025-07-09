@@ -37,13 +37,16 @@ def pad_series(ts, required_len):
         ts = padding + list(ts)
     return ts
 
-def hf_to_dataframe(dataset, min_required_length):
+
+
+def hf_to_autogluon_df(dataset, min_required_length=64):
     rows = []
     i = 0
     for entry in tqdm(dataset, desc="Preparing dataset"):
-        if i == 10:
+        if i == 20:
             break
-        item_id = entry["item_id"]
+
+        item_id = entry.get("id") or entry.get("item_id")
         start = pd.to_datetime(entry["start"], errors="coerce")  # Coerce invalid
         freq = entry["freq"].replace("T", "min").replace("H", "h")  # Standardize
 
@@ -51,7 +54,12 @@ def hf_to_dataframe(dataset, min_required_length):
         if pd.isna(start):
             continue
 
-        values = pad_series(entry["target"][0], min_required_length)
+        raw = entry["target"]
+        normalized = [[x[0]] if isinstance(x, list) else [x] for x in raw]
+        values = np.array(normalized, dtype=np.float32)
+        #values = raw_values[~np.isnan(raw_values)]
+        #values = pad_series(values, min_required_length)
+        #print(values)
 
         try:
             timestamps = pd.date_range(start=start, periods=len(values), freq=freq)
@@ -60,15 +68,17 @@ def hf_to_dataframe(dataset, min_required_length):
             continue
 
         for t, val in zip(timestamps, values):
-            if val != None:
+            if val is not np.nan:
                 rows.append({
                     "item_id": item_id,
                     "timestamp": t,
-                    "target": np.array([val], dtype=np.float32),
+                    "target": val[0], #np.array([val], dtype=np.float32),
                 })
         i += 1
 
-    return pd.DataFrame(rows)
+    full_df = pd.DataFrame(rows)
+    print(full_df)
+    return TimeSeriesDataFrame.from_data_frame(full_df)
 
 def train(
     model_name=MODEL_NAME,
@@ -78,52 +88,19 @@ def train(
     test_size=TEST_SIZE,
     batch_size=2,
     learning_rate=1e-5,
-    #eval_metric=, (str) #TODO: ?
     ):
-
     context_length = 256 #2048
     prediction_length = 64 #256
 
-    num_chunks = 7 #8 #FIXME: non è tutto il dataset
-
-    if not all(os.path.exists(f"data/chronos_parquet_splits/split_{i}.parquet") for i in range(6, num_chunks)):
-        os.makedirs("data/chronos_parquet_splits", exist_ok=True)
-
-        for i in range(num_chunks):
-            print(f"Processing split_part_{i}.arrow")
-
-            # Load HuggingFace dataset from disk
-            dataset = load_from_disk(f"data/split_part_{i}.arrow")
-
-            # Convert HuggingFace dataset to pandas DataFrame
-            df = hf_to_dataframe(dataset, min_required_length=context_length+prediction_length)
-            df.to_parquet(f"data/chronos_parquet_splits/split_{i}.parquet", index=False)
-
     # Concatenate all datasets
-    df_list = [
-        pd.read_parquet(f"data/chronos_parquet_splits/split_{i}.parquet")
-        for i in range(num_chunks)
-    ]
-    full_df = pd.concat(df_list, ignore_index=True)
-    full_df = full_df.dropna(subset=["target"])
-    full_df["target"] = full_df["target"].apply(lambda x: np.array(x, dtype=np.float32))
-
-    #full_df = dd.read_parquet("data/chronos_parquet_splits/*.parquet").compute()
-
-    """
-    ds = Dataset.load_from_disk("data/moirai_dataset")
-    full_df = hf_to_dataframe(ds, min_required_length=context_length+prediction_length)
-    """
-
-    ts_df = TimeSeriesDataFrame(full_df)
+    shard_path = "data/moirai_dataset/data-00000-of-00055.arrow"
+    ds = Dataset.from_file(shard_path)
+    #ds = Dataset.load_from_disk("data/moirai_dataset") # FIXME
+    ts_df = hf_to_autogluon_df(ds, min_required_length=context_length+prediction_length)
     print("Dataset ready")
 
     # Split item_ids into train and validation sets (80/20 split)
     unique_ids = ts_df.item_ids
-    #unique_ids = ts_df.item_ids.unique().to_numpy().tolist()
-    print(f"[DEBUG] unique_ids type: {type(unique_ids)}")
-    print(f"[DEBUG] First 5 IDs: {unique_ids[:5]}")
-    print(f"[DEBUG] Number of IDs: {len(unique_ids)}")
     train_ids, val_ids = train_test_split(unique_ids, test_size=test_size, random_state=RANDOM_SEED)
 
     # Select time series by ID
@@ -221,7 +198,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_name", type=str, default=MODEL_NAME)
-    parser.add_argument("--epochs", type=int, default=EPOCHS)
+    parser.add_argument("--epochs", type=int, default=1)#EPOCHS) #FIXME
     parser.add_argument("--patience", type=int, default=PATIENCE)
     parser.add_argument("--batch_size", type=int, default=2)
     parser.add_argument("--learning_rate", type=float, default=1e-5)
