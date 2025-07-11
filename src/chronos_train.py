@@ -15,6 +15,8 @@ from datasets import Dataset, concatenate_datasets, load_from_disk
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
+DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/" # "data/"
+
 MODEL_NAME = "chronos-bolt-tiny" # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
 MODEL_MAP = {
     "chronos-bolt-tiny": "autogluon/chronos-bolt-tiny",
@@ -77,7 +79,6 @@ def hf_to_autogluon_df(dataset, min_required_length=64):
         i += 1
 
     full_df = pd.DataFrame(rows)
-    print(full_df)
     return TimeSeriesDataFrame.from_data_frame(full_df)
 
 def train(
@@ -93,9 +94,9 @@ def train(
     prediction_length = 64 #256
 
     # Concatenate all datasets
-    shard_path = "data/moirai_dataset/data-00000-of-00055.arrow"
+    shard_path = f"{DATA_PATH}moirai_dataset/data-00000-of-00055.arrow"
     ds = Dataset.from_file(shard_path)
-    #ds = Dataset.load_from_disk("data/moirai_dataset") # FIXME
+    #ds = Dataset.load_from_disk(f"{DATA_PATH}moirai_dataset") # FIXME
     ts_df = hf_to_autogluon_df(ds, min_required_length=context_length+prediction_length)
     print("Dataset ready")
 
@@ -155,16 +156,16 @@ def train(
     print(">> START TRAINING ...")
     start_time = time.time()
 
-    """train_df = train_df.astype(np.float32)
+    train_df = train_df.astype(np.float32)
     train_df = train_df.loc["MT_005"][:300]
     train_df = train_df.reset_index()
     train_df["item_id"] = "MT_005"
     # filtered_train_df = train_df.groupby(level=0).head(300)
     train_df = train_df.set_index(["item_id", "timestamp"])
-    val_df = val_df.astype(np.float32)"""
+    val_df = val_df.astype(np.float32)
     model.fit(
         train_data=train_df,
-        val_data=val_df,
+        val_data=train_df, #FIXME
     )
 
     end_time = time.time()

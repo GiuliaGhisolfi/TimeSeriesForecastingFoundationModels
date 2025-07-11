@@ -8,7 +8,7 @@ import torch
 from datasets import Dataset, concatenate_datasets, load_from_disk
 from tqdm import tqdm
 
-from compose_moirai_dataset import concatenate_moirai_datasets
+from moirai_utils.compose_moirai_dataset import concatenate_moirai_datasets
 from moirai_utils.load_moirai_data import load_data
 from moirai_utils.split_long_series_dataset import split_long_series_dataset
 from moirai_utils.transformations import ToTorch
