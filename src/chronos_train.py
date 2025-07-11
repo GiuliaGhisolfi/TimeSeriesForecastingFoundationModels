@@ -43,7 +43,7 @@ def hf_to_autogluon_df(dataset, min_required_length=64):
     rows = []
     i = 0
     for entry in tqdm(dataset, desc="Preparing dataset"):
-        if i == 20:
+        if i == 5:
             break
 
         item_id = entry.get("id") or entry.get("item_id")
@@ -126,7 +126,7 @@ def train(
             "optim": "adamw_torch",
         },
         "fine_tune_lr": learning_rate,
-        "fine_tune_steps": total_fine_tune_steps,
+        "fine_tune_steps": 1, #total_fine_tune_steps,
         "fine_tune_batch_size": batch_size,
         "eval_every_step": True,
         "save_checkpoints": True,
@@ -134,10 +134,11 @@ def train(
         "early_stopping_patience": patience,
         "device": "auto",
         "logging_strategy": "steps",
-        "logging_steps": 50,  # stampa ogni n step
+        "logging_steps": 1,  # stampa ogni n step
         "report_to": "none",
         "disable_tqdm": False,
         "verbose": True,
+        "torch_dtype": "float32",
     }
     model = ChronosModel(
         name=model_name,
@@ -154,9 +155,16 @@ def train(
     print(">> START TRAINING ...")
     start_time = time.time()
 
+    """train_df = train_df.astype(np.float32)
+    train_df = train_df.loc["MT_005"][:300]
+    train_df = train_df.reset_index()
+    train_df["item_id"] = "MT_005"
+    # filtered_train_df = train_df.groupby(level=0).head(300)
+    train_df = train_df.set_index(["item_id", "timestamp"])
+    val_df = val_df.astype(np.float32)"""
     model.fit(
         train_data=train_df,
-        tuning_data=val_df
+        val_data=val_df,
     )
 
     end_time = time.time()

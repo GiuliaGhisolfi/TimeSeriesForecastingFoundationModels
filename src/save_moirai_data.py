@@ -15,6 +15,8 @@ from uni2ts.data.indexer.hf_dataset_indexer import HuggingFaceDatasetIndexer
 RANDOM_SEED = 42
 TEST_SIZE = 0.2
 
+DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/" # "data/"
+
 dataset_name_list = [
     "autogluon_chronos_datasets_electricity_15min",
     "autogluon_chronos_datasets_mexico_city_bikes",
@@ -142,7 +144,7 @@ dataset_name_list = [
 ]
 
 
-def load_dataset_from_disk(dataset_name, path="data/splitted_moirai_dataset"):
+def load_dataset_from_disk(dataset_name, path=f"{DATA_PATH}splitted_moirai_dataset"):
     save_path = f"{path}/{dataset_name.replace('/', '_')}"
     
     if os.path.exists(save_path):
@@ -158,8 +160,8 @@ def unify_target_shape(example):
     return example
 
 def stratified_split(test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=100000):
-    os.makedirs("data/moirai_tmp/train", exist_ok=True)
-    os.makedirs("data/moirai_tmp/val", exist_ok=True)
+    os.makedirs(f"{DATA_PATH}moirai_tmp/train", exist_ok=True)
+    os.makedirs(f"{DATA_PATH}moirai_tmp/val", exist_ok=True)
 
     rng = random.Random(seed)
     groups = defaultdict(list)
@@ -168,7 +170,7 @@ def stratified_split(test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=100000):
     val_chunk = []
 
     for ds_name in tqdm(dataset_name_list, desc="Loading processed datasets"):
-        ds = load_dataset_from_disk(ds_name.replace("/", "_"), path="data/moirai_dataset_processed")
+        ds = load_dataset_from_disk(ds_name.replace("/", "_"), path=f"{DATA_PATH}moirai_dataset_processed")
 
         for example in ds:
             key = example["dataset"]  # Stratify by dataset name
@@ -184,24 +186,24 @@ def stratified_split(test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=100000):
         val_chunk.extend(val_rows)
 
         if len(train_chunk) >= chunk_size:
-            Dataset.from_list(train_chunk).save_to_disk(f"data/moirai_tmp/train/chunk_{train_idx}")
+            Dataset.from_list(train_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{train_idx}")
             train_chunk = []
             train_idx += 1
 
         if len(val_chunk) >= chunk_size:
-            Dataset.from_list(val_chunk).save_to_disk(f"data/moirai_tmp/val/chunk_{val_idx}")
+            Dataset.from_list(val_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{val_idx}")
             val_chunk = []
             val_idx += 1
 
     # Salva eventuali rimanenze
     if train_chunk:
-        Dataset.from_list(train_chunk).save_to_disk(f"data/moirai_tmp/train/chunk_{train_idx}")
+        Dataset.from_list(train_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{train_idx}")
     if val_chunk:
-        Dataset.from_list(val_chunk).save_to_disk(f"data/moirai_tmp/val/chunk_{val_idx}")
+        Dataset.from_list(val_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{val_idx}")
 
     # Carica tutto da disco
-    train_datasets = [load_from_disk(f"data/moirai_tmp/train/chunk_{i}") for i in range(train_idx + 1)]
-    val_datasets = [load_from_disk(f"data/moirai_tmp/val/chunk_{i}") for i in range(val_idx + 1)]
+    train_datasets = [load_from_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{i}") for i in range(train_idx + 1)]
+    val_datasets = [load_from_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{i}") for i in range(val_idx + 1)]
 
     train_dataset = concatenate_datasets(train_datasets)
     val_dataset = concatenate_datasets(val_datasets)
@@ -225,7 +227,7 @@ def to_timeseries_dataset(
     )
 
 def create_moirai_datasets(context_length=2048, prediction_length=256):
-    os.makedirs("data/moirai_dataset_processed", exist_ok=True)
+    os.makedirs(f"{DATA_PATH}moirai_dataset_processed", exist_ok=True)
 
     for ds_name in tqdm(dataset_name_list, desc="Preparing data"):
         ds = load_dataset_from_disk(ds_name)
@@ -251,7 +253,7 @@ def create_moirai_datasets(context_length=2048, prediction_length=256):
         )
 
         save_path = f"{ds_name.replace('/', '_')}"
-        indexed_dataset.save_to_disk(f"data/moirai_dataset_processed/{save_path}")
+        indexed_dataset.save_to_disk(f"{DATA_PATH}moirai_dataset_processed/{save_path}")
 
     print("Done :)")
 
@@ -259,7 +261,7 @@ def create_moirai_datasets(context_length=2048, prediction_length=256):
 def save_moirai_datasets(stratify_col="dataset", context_length=2048, prediction_length=256,
         test_size=TEST_SIZE, seed=RANDOM_SEED):
     # Save datasets to disk
-    os.makedirs("data/moirai_dataset_processed", exist_ok=True)
+    os.makedirs(F"{DATA_PATH}moirai_dataset_processed", exist_ok=True)
     create_moirai_datasets(context_length, prediction_length)
 
     # Stratified split
@@ -284,10 +286,10 @@ if __name__ == "__main__":
     train_dataset, val_dataset = save_moirai_datasets()
 
     # save the datasets to disk
-    with open("data/train_dataset.pkl", "wb") as f:
+    with open(f"{DATA_PATH}train_dataset.pkl", "wb") as f:
         pickle.dump(train_dataset, f)
 
-    with open("data/val_dataset.pkl", "wb") as f:
+    with open(f"{DATA_PATH}val_dataset.pkl", "wb") as f:
         pickle.dump(val_dataset, f)
 
     print("Train and validation datasets saved to disk.")
