@@ -12,6 +12,9 @@ from moirai_utils.transformations import ToTorch
 from uni2ts.data.dataset import SampleTimeSeriesType, TimeSeriesDataset
 from uni2ts.data.indexer.hf_dataset_indexer import HuggingFaceDatasetIndexer
 
+from collections import defaultdict
+import shutil
+
 RANDOM_SEED = 42
 TEST_SIZE = 0.2
 
@@ -159,49 +162,62 @@ def unify_target_shape(example):
         example["target"] = [[float(val) for val in row] for row in example["target"]]
     return example
 
-def stratified_split(test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=100000):
+def stratified_split(test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=5000):
+    shutil.rmtree(f"{DATA_PATH}moirai_tmp", ignore_errors=True)
     os.makedirs(f"{DATA_PATH}moirai_tmp/train", exist_ok=True)
     os.makedirs(f"{DATA_PATH}moirai_tmp/val", exist_ok=True)
 
     rng = random.Random(seed)
-    groups = defaultdict(list)
     train_idx = val_idx = 0
     train_chunk = []
     val_chunk = []
 
-    for ds_name in tqdm(dataset_name_list, desc="Loading processed datasets"):
+    for ds_name in tqdm(dataset_name_list, desc="Loading + Splitting"):
         ds = load_dataset_from_disk(ds_name.replace("/", "_"), path=f"{DATA_PATH}moirai_dataset_processed")
 
+        groups = defaultdict(list)
         for example in ds:
-            key = example["dataset"]  # Stratify by dataset name
+            key = example["dataset"]
             groups[key].append(example)
 
-    for key, rows in tqdm(groups.items(), desc="Stratified split by group"):
-        rng.shuffle(rows)
-        n_val = int(len(rows) * test_size)
-        val_rows = rows[:n_val]
-        train_rows = rows[n_val:]
+        for key, rows in groups.items():
+            rng.shuffle(rows)
+            n_val = int(len(rows) * test_size)
+            val_rows = rows[:n_val]
+            train_rows = rows[n_val:]
 
-        train_chunk.extend(train_rows)
-        val_chunk.extend(val_rows)
+            train_chunk.extend(train_rows)
+            val_chunk.extend(val_rows)
 
-        if len(train_chunk) >= chunk_size:
+            if len(train_chunk) >= chunk_size:
+                Dataset.from_list(train_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{train_idx}")
+                train_chunk = []
+                train_idx += 1
+
+            if len(val_chunk) >= chunk_size:
+                Dataset.from_list(val_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{val_idx}")
+                val_chunk = []
+                val_idx += 1
+        
+        if train_chunk:
             Dataset.from_list(train_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{train_idx}")
             train_chunk = []
             train_idx += 1
-
-        if len(val_chunk) >= chunk_size:
+        if val_chunk:
             Dataset.from_list(val_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{val_idx}")
             val_chunk = []
             val_idx += 1
 
-    # Salva eventuali rimanenze
+        del ds
+        del groups
+
+        print(f"{ds_name} done")
+
     if train_chunk:
         Dataset.from_list(train_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{train_idx}")
     if val_chunk:
         Dataset.from_list(val_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{val_idx}")
 
-    # Carica tutto da disco
     train_datasets = [load_from_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{i}") for i in range(train_idx + 1)]
     val_datasets = [load_from_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{i}") for i in range(val_idx + 1)]
 
@@ -261,8 +277,8 @@ def create_moirai_datasets(context_length=2048, prediction_length=256):
 def save_moirai_datasets(stratify_col="dataset", context_length=2048, prediction_length=256,
         test_size=TEST_SIZE, seed=RANDOM_SEED):
     # Save datasets to disk
-    os.makedirs(F"{DATA_PATH}moirai_dataset_processed", exist_ok=True)
-    create_moirai_datasets(context_length, prediction_length)
+    #os.makedirs(F"{DATA_PATH}moirai_dataset_processed", exist_ok=True)
+    #create_moirai_datasets(context_length, prediction_length)
 
     # Stratified split
     train_dataset, val_dataset = stratified_split(

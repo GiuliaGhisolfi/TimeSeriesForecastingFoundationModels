@@ -4,58 +4,178 @@ import numpy as np
 import pandas as pd
 from datasets import load_from_disk
 from tqdm import tqdm
+import json
+from datasets import Dataset, concatenate_datasets, load_from_disk
 
 
-def pad_series(ts, required_len):
-    pad_len = required_len - len(ts)
-    if pad_len > 0:
-        padding = [np.nan] * pad_len
-        ts = padding + list(ts)
-    return ts
+DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/" # "data/"
 
-def hf_to_dataframe(dataset, min_required_length):
-    rows = []
-    for entry in tqdm(dataset, desc="Preparing dataset"):
-        item_id = entry["item_id"]
-        start = pd.to_datetime(entry["start"], errors="coerce")  # Coerce invalid
-        freq = entry["freq"].replace("T", "min").replace("H", "h")  # Standardize
+dataset_name_list = [
+    "autogluon_chronos_datasets_electricity_15min",
+    "autogluon_chronos_datasets_mexico_city_bikes",
+    "autogluon_chronos_datasets_monash_electricity_hourly",
+    "autogluon_chronos_datasets_monash_electricity_weekly",
+    "autogluon_chronos_datasets_taxi_1h",
+    "ett_h1",
+    "ett_h2",
+    "ett_m1",
+    "ett_m2",
+    "Salesforce_lotsa_data_alibaba_cluster_trace_2018",
+    "Salesforce_lotsa_data_azure_vm_traces_2017",
+    "Salesforce_lotsa_data_bdg-2_bear",
+    "Salesforce_lotsa_data_bdg-2_fox",
+    "Salesforce_lotsa_data_bdg-2_panther",
+    "Salesforce_lotsa_data_bdg-2_rat",
+    "Salesforce_lotsa_data_BEIJING_SUBWAY_30MIN",
+    "Salesforce_lotsa_data_borg_cluster_data_2011",
+    "Salesforce_lotsa_data_cmip6_1850",
+    "Salesforce_lotsa_data_cmip6_1855",
+    "Salesforce_lotsa_data_cmip6_1860",
+    "Salesforce_lotsa_data_cmip6_1865",
+    "Salesforce_lotsa_data_cmip6_1870",
+    "Salesforce_lotsa_data_cmip6_1875",
+    "Salesforce_lotsa_data_cmip6_1880",
+    "Salesforce_lotsa_data_cmip6_1885",
+    "Salesforce_lotsa_data_cmip6_1890",
+    "Salesforce_lotsa_data_cmip6_1895",
+    "Salesforce_lotsa_data_cmip6_1900",
+    "Salesforce_lotsa_data_cmip6_1905",
+    "Salesforce_lotsa_data_cmip6_1910",
+    "Salesforce_lotsa_data_cmip6_1915",
+    "Salesforce_lotsa_data_cmip6_1920",
+    "Salesforce_lotsa_data_cmip6_1925",
+    "Salesforce_lotsa_data_cmip6_1930",
+    "Salesforce_lotsa_data_cmip6_1935",
+    "Salesforce_lotsa_data_covid_deaths",
+    "Salesforce_lotsa_data_covid_mobility",
+    "Salesforce_lotsa_data_era5_1989",
+    "Salesforce_lotsa_data_era5_1990",
+    "Salesforce_lotsa_data_era5_1991",
+    "Salesforce_lotsa_data_era5_1992",
+    "Salesforce_lotsa_data_era5_1993",
+    "Salesforce_lotsa_data_era5_1994",
+    "Salesforce_lotsa_data_era5_1995",
+    "Salesforce_lotsa_data_era5_1996",
+    "Salesforce_lotsa_data_era5_1997",
+    "Salesforce_lotsa_data_era5_1998",
+    "Salesforce_lotsa_data_era5_1999",
+    "Salesforce_lotsa_data_era5_2000",
+    "Salesforce_lotsa_data_era5_2001",
+    "Salesforce_lotsa_data_era5_2002",
+    "Salesforce_lotsa_data_era5_2003",
+    "Salesforce_lotsa_data_era5_2004",
+    "Salesforce_lotsa_data_extended_web_traffic_with_missing",
+    "Salesforce_lotsa_data_favorita_sales",
+    "Salesforce_lotsa_data_favorita_transactions",
+    "Salesforce_lotsa_data_fred_md",
+    "Salesforce_lotsa_data_gfc12_load",
+    "Salesforce_lotsa_data_godaddy",
+    "Salesforce_lotsa_data_hierarchical_sales",
+    "Salesforce_lotsa_data_hog",
+    "Salesforce_lotsa_data_hospital",
+    "Salesforce_lotsa_data_HZMETRO",
+    "Salesforce_lotsa_data_ideal",
+    "Salesforce_lotsa_data_kaggle_web_traffic_weekly",
+    "Salesforce_lotsa_data_kdd_cup_2018_with_missing",
+    "Salesforce_lotsa_data_kdd2022",
+    "Salesforce_lotsa_data_largest",
+    "Salesforce_lotsa_data_largest_2017",
+    "Salesforce_lotsa_data_largest_2018",
+    "Salesforce_lotsa_data_largest_2019",
+    "Salesforce_lotsa_data_largest_2020",
+    "Salesforce_lotsa_data_largest_2021",
+    "Salesforce_lotsa_data_lcl",
+    "Salesforce_lotsa_data_london_smart_meters_with_missing",
+    "Salesforce_lotsa_data_LOOP_SEATTLE",
+    "Salesforce_lotsa_data_LOS_LOOP",
+    "Salesforce_lotsa_data_M_DENSE",
+    "Salesforce_lotsa_data_m1_monthly",
+    "Salesforce_lotsa_data_m1_quarterly",
+    "Salesforce_lotsa_data_m1_yearly",
+    "Salesforce_lotsa_data_m4_daily",
+    "Salesforce_lotsa_data_m4_hourly",
+    "Salesforce_lotsa_data_m4_monthly",
+    "Salesforce_lotsa_data_m4_quarterly",
+    "Salesforce_lotsa_data_m4_weekly",
+    "Salesforce_lotsa_data_m4_yearly",
+    "Salesforce_lotsa_data_m5",
+    "Salesforce_lotsa_data_monash_m3_monthly",
+    "Salesforce_lotsa_data_monash_m3_other",
+    "Salesforce_lotsa_data_monash_m3_quarterly",
+    "Salesforce_lotsa_data_monash_m3_yearly",
+    "Salesforce_lotsa_data_nn5_daily_with_missing",
+    "Salesforce_lotsa_data_nn5_weekly",
+    "Salesforce_lotsa_data_pedestrian_counts",
+    "Salesforce_lotsa_data_PEMS_BAY",
+    "Salesforce_lotsa_data_PEMS03",
+    "Salesforce_lotsa_data_PEMS04",
+    "Salesforce_lotsa_data_PEMS07",
+    "Salesforce_lotsa_data_PEMS08",
+    "Salesforce_lotsa_data_project_tycho",
+    "Salesforce_lotsa_data_Q-TRAFFIC",
+    "Salesforce_lotsa_data_residential_load_power",
+    "Salesforce_lotsa_data_residential_pv_power",
+    "Salesforce_lotsa_data_restaurant",
+    "Salesforce_lotsa_data_rideshare_with_missing",
+    "Salesforce_lotsa_data_SHMETRO",
+    "Salesforce_lotsa_data_subseasonal",
+    "Salesforce_lotsa_data_subseasonal_precip",
+    "Salesforce_lotsa_data_SZ_TAXI",
+    "Salesforce_lotsa_data_taxi_30min",
+    "Salesforce_lotsa_data_temperature_rain_with_missing",
+    "Salesforce_lotsa_data_tourism_monthly",
+    "Salesforce_lotsa_data_tourism_quarterly",
+    "Salesforce_lotsa_data_tourism_yearly",
+    "Salesforce_lotsa_data_traffic_hourly",
+    "Salesforce_lotsa_data_traffic_weekly",
+    "Salesforce_lotsa_data_uber_tlc_daily",
+    "Salesforce_lotsa_data_uber_tlc_hourly",
+    "Salesforce_lotsa_data_vehicle_trips_with_missing",
+    "Salesforce_lotsa_data_weather",
+    "Salesforce_lotsa_data_wiki-rolling_nips",
+    "Salesforce_lotsa_data_wind_farms_with_missing"
+]
 
-        # Skip rows with invalid start
-        if pd.isna(start):
-            continue
+import os
 
-        values = pad_series(entry["target"][0], min_required_length)
-
-        try:
-            timestamps = pd.date_range(start=start, periods=len(values), freq=freq)
-        except (pd.errors.OutOfBoundsDatetime, OverflowError):
-            print(f"Skipping entry with item_id={item_id}, start={start}, freq={freq}")
-            continue
-
-        for t, val in zip(timestamps, values):
-            rows.append({
-                "item_id": item_id,
-                "timestamp": t,
-                "target": val,
-            })
-
-    return pd.DataFrame(rows)
+def load_dataset_from_disk(dataset_name, path=f"{DATA_PATH}splitted_moirai_dataset"):
+    save_path = f"{path}/{dataset_name.replace('/', '_')}"
+    
+    if os.path.exists(save_path):
+        return Dataset.load_from_disk(save_path)
+    else:
+        raise FileNotFoundError(f"Dataset {dataset_name} not found in {save_path}")
+    
+def make_json_serializable(obj):
+    if isinstance(obj, (pd.Timestamp, np.datetime64)):
+        return str(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, (np.float32, np.float64)):
+        return float(obj)
+    if isinstance(obj, (np.int32, np.int64)):
+        return int(obj)
+    return obj  # fallback
 
 def main():
-    context_length = 512 #2048
-    prediction_length = 256
-    num_chunks = 8
+    output_file = DATA_PATH+"dataset_gluonts.jsonl"
 
-    for i in range(6, num_chunks):
-        print(f"Processing split_part_{i}.arrow")
+    for ds_name in tqdm(dataset_name_list[:2], desc="Preparing data"):
+        ds = load_dataset_from_disk(ds_name)
+        print(f"Loaded {ds_name} dataset.")
 
-        # Load HuggingFace dataset from disk
-        dataset = load_from_disk(f"data/split_part_{i}.arrow")
-        
-        # Convert HuggingFace dataset to pandas DataFrame
-        df = hf_to_dataframe(dataset, min_required_length=context_length+prediction_length)
-        df.to_parquet(f"data/chronos_parquet_splits/split_{i}.parquet", index=False)
-    
+        with open(output_file, "w") as f:
+            for example in ds:
+                example_serializable = {k: make_json_serializable(v) for k, v in example.items()}
+                """json.dump(example_serializable, f)
+                f.write("\n")"""
+
+                if isinstance(example_serializable["start"], (pd.Timestamp, np.datetime64)):
+                    example_serializable["start"] = str(example_serializable["start"])
+                
+                json.dump(example_serializable, f)
+                f.write("\n")
+
     print("Done :)")
 
 if __name__ == "__main__":

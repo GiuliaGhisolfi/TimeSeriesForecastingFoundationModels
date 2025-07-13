@@ -515,11 +515,11 @@ def main(
     optim: str = "adamw_torch_fused",
     shuffle_buffer_length: int = 100,
     gradient_accumulation_steps: int = 2,
-    model_id: str = "google/t5-efficient-tiny",
+    model_id: str = "google/t5-efficient-tiny", #TODO
     model_type: str = "seq2seq",
     random_init: bool = False,
     tie_embeddings: bool = False,
-    output_dir: str = "./output/",
+    output_dir: str = "/raid/decaro/TimeSeriesForecastingFoundationModels/chronos_output",
     tf32: bool = True,
     torch_compile: bool = True,
     tokenizer_class: str = "MeanScaleUniformBins",
@@ -672,7 +672,7 @@ def main(
         max_steps=max_steps,
         gradient_accumulation_steps=gradient_accumulation_steps,
         dataloader_num_workers=dataloader_num_workers,
-        tf32=tf32,  # remove this if not using Ampere GPUs (e.g., A100)
+        #tf32=tf32, # remove this if not using Ampere GPUs (e.g., A100)
         torch_compile=torch_compile,
         ddp_find_unused_parameters=False,
         remove_unused_columns=False,
