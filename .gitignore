@@ -2,3 +2,6 @@ __pycache__
 data/splitted_moirai_dataset
 data/splitted_moirai_dataset.zip
 checkpoints
+logs
+.vscode
+results

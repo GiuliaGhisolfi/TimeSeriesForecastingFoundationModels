@@ -155,6 +155,7 @@ class MoiraiModule(
         :param patch_size: patch size for each token
         :return: predictive distribution
         """
+        target = torch.nan_to_num(target, nan=0.0, posinf=1e9, neginf=-1e9) # FIXME: my code
         loc, scale = self.scaler(
             target,
             observed_mask * ~prediction_mask,

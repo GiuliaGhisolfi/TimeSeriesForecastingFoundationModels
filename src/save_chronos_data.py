@@ -158,9 +158,9 @@ def make_json_serializable(obj):
     return obj  # fallback
 
 def main():
-    output_file = DATA_PATH+"dataset_gluonts.jsonl"
+    output_file = DATA_PATH+"dummy_dataset_gluonts.jsonl"
 
-    for ds_name in tqdm(dataset_name_list[:2], desc="Preparing data"):
+    for ds_name in tqdm(dataset_name_list, desc="Preparing data"):
         ds = load_dataset_from_disk(ds_name)
         print(f"Loaded {ds_name} dataset.")
 

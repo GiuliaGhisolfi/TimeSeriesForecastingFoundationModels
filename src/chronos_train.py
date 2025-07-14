@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import torch
-from chronos.base import BaseChronosPipeline
+from chronos.chronos_bolt import ChronosBoltPipeline
 from chronos.chronos import ChronosModel, ChronosConfig
 from tqdm import tqdm
 from chronos_utils.chronos_dataset import ChronosDataset, has_enough_observations
@@ -60,7 +60,7 @@ def train(
     ):
     # Initialize ChronosModel
     model_path = MODEL_MAP[model_name]
-    pipeline = BaseChronosPipeline.from_pretrained(model_path)
+    pipeline = ChronosBoltPipeline.from_pretrained(model_path)
     
     with open("src/chronos_configs/chronos-bolt-tiny.yaml", "r") as f:
         config_dict = yaml.safe_load(f)
@@ -94,7 +94,8 @@ def train(
 
     # Data
     training_data_paths = [
-        DATA_PATH+"dataset_gluonts.jsonl"
+        DATA_PATH+"dummy_dataset_gluonts.jsonl"
+        #DATA_PATH+"dataset_gluonts.jsonl"
         ] # FIXME
     train_datasets = [
         Filter(

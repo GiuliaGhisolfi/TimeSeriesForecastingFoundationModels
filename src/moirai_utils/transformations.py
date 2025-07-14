@@ -32,12 +32,12 @@ class ToTorch(Transformation):
         # AddTimeIndex
         time_id_transform = AddTimeIndex(fields=("target",))
         data_entry = time_id_transform(data_entry)
-        data_entry["time_id"] = torch.tensor(data_entry["time_id"], dtype=torch.long).squeeze()[:, -total_length:]
+        data_entry["time_id"] = torch.tensor(data_entry["time_id"], dtype=torch.long).squeeze()[-total_length:]
 
         # AddVariateIndex
         variate_id_transform = AddVariateIndex(fields=("target",), max_dim=target.shape[0])
         data_entry = variate_id_transform(data_entry)
-        data_entry["variate_id"] = torch.tensor(data_entry["variate_id"], dtype=torch.long).squeeze()[:, -total_length:]
+        data_entry["variate_id"] = torch.tensor(data_entry["variate_id"], dtype=torch.long).squeeze()[-total_length:]
 
         # Set prediction mask
         prediction_mask = torch.zeros_like(target, dtype=torch.bool)
@@ -49,7 +49,7 @@ class ToTorch(Transformation):
 
         return {
             "target": data_entry["target"],
-            "observed_mask": data_entry["observed_mask"][:, -total_length:],
+            "observed_mask": data_entry["observed_mask"][-total_length:],
             "time_id": data_entry["time_id"],
             "variate_id": data_entry["variate_id"],
             "prediction_mask": data_entry["prediction_mask"],

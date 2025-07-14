@@ -215,8 +215,12 @@ def stratified_split(test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=5000):
 
     if train_chunk:
         Dataset.from_list(train_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{train_idx}")
+    else:
+        train_idx += 1
     if val_chunk:
         Dataset.from_list(val_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{val_idx}")
+    else:
+        val_idx -= 1
 
     train_datasets = [load_from_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{i}") for i in range(train_idx + 1)]
     val_datasets = [load_from_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{i}") for i in range(val_idx + 1)]
@@ -277,8 +281,8 @@ def create_moirai_datasets(context_length=2048, prediction_length=256):
 def save_moirai_datasets(stratify_col="dataset", context_length=2048, prediction_length=256,
         test_size=TEST_SIZE, seed=RANDOM_SEED):
     # Save datasets to disk
-    #os.makedirs(F"{DATA_PATH}moirai_dataset_processed", exist_ok=True)
-    #create_moirai_datasets(context_length, prediction_length)
+    os.makedirs(F"{DATA_PATH}moirai_dataset_processed", exist_ok=True)
+    create_moirai_datasets(context_length, prediction_length)
 
     # Stratified split
     train_dataset, val_dataset = stratified_split(

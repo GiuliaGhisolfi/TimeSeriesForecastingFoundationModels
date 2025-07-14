@@ -26,6 +26,8 @@ from torch import nn
 
 from .position import AttentionBias, QueryKeyProjection
 
+from moirai_utils.scaled_dot_product_attention import scaled_dot_product_attention
+
 # TODO: Support returning weights
 # TODO: Support caching (return past_key_value)
 
@@ -308,13 +310,13 @@ class GroupedQueryAttention(nn.Module):
         attn_mask = attn_mask.squeeze(1)
         ################
 
-        out = F.scaled_dot_product_attention(
+        out = scaled_dot_product_attention(#F.scaled_dot_product_attention(
             query,
             key,
             value,
             attn_mask=attn_mask,
             dropout_p=self.attn_dropout_p,
-            #scale=self.softmax_scale, #TODO
+            scale=self.softmax_scale, #TODO
         )
         # FIXME: my code
         out = out.unsqueeze(2).unsqueeze(0)

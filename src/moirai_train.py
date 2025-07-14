@@ -31,6 +31,9 @@ MODEL_MAP = {
 }
 DEVICE_MAP = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+TRAIN_DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/train_dataset.pkl"
+VAL_DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/val_dataset.pkl"
+
 EPOCHS = 10
 TEST_SIZE = 0.2
 PATIENCE = 3
@@ -119,10 +122,10 @@ def train(
     )
 
     # Dataset
-    if data_from_splitted_files and os.path.exists("data/train_dataset.pkl") and os.path.exists("data/val_dataset.pkl"):
-        with open("data/train_dataset.pkl", "rb") as f:
+    if data_from_splitted_files and os.path.exists(TRAIN_DATA_PATH) and os.path.exists(VAL_DATA_PATH):
+        with open(TRAIN_DATA_PATH, "rb") as f:
             train_dataset = pickle.load(f)
-        with open("data/val_dataset.pkl", "rb") as f:
+        with open(VAL_DATA_PATH, "rb") as f:
             val_dataset = pickle.load(f)
     else:
         train_dataset, val_dataset = get_train_and_val_datasets(test_size=test_size)
