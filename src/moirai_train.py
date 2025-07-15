@@ -22,6 +22,7 @@ from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
 torch.set_float32_matmul_precision('high')
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:64"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 MODEL_NAME = "moirai_small"
 MODEL_MAP = {
@@ -49,7 +50,7 @@ def train(
     patience=PATIENCE,
     data_from_splitted_files=True,
     test_size=TEST_SIZE,
-    batch_size=2,
+    batch_size=1,
     max_sequence_length=None,#1024,
     min_patches=16,
     min_mask_ratio=0.2,
@@ -59,8 +60,8 @@ def train(
     beta2=0.98,
     loss_func=PackedNLLLoss(),
     val_metric=[PackedNLLLoss(), PackedNMAELoss(), PackedNMSELoss(), PackedMAPELoss()],
-    learning_rate=1e-5, # default: 1e-3
-    weight_decay=1e-2
+    learning_rate=1e-7, # default: 1e-3
+    weight_decay=1e-5, # default: 1e-2
     ):
     print(f"Using device: {device_map}")
 
@@ -116,7 +117,7 @@ def train(
         callbacks=[checkpoint_all, early_stopping, stats_logger],
         log_every_n_steps=50,
         accumulate_grad_batches=1, # default
-        precision="bf16", # mixed precision (fp16)
+        precision="64", # mixed precision (fp16)
         gradient_clip_val=5.0,  # gradient clipping
         gradient_clip_algorithm="value",  # default: "norm"
     )
@@ -166,7 +167,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, default=MODEL_NAME)
     parser.add_argument("--epochs", type=int, default=EPOCHS)
     parser.add_argument("--patience", type=int, default=PATIENCE)
-    parser.add_argument("--batch_size", type=int, default=4)
+    parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--max_sequence_length", type=int, default=None)
     parser.add_argument("--min_patches", type=int, default=16)
     parser.add_argument("--min_mask_ratio", type=float, default=0.2)
@@ -174,8 +175,8 @@ if __name__ == "__main__":
     parser.add_argument("--max_dim", type=int, default=1024)
     parser.add_argument("--beta1", type=float, default=0.9)
     parser.add_argument("--beta2", type=float, default=0.98)
-    parser.add_argument("--learning_rate", type=float, default=1e-3)
-    parser.add_argument("--weight_decay", type=float, default=1e-2)
+    parser.add_argument("--learning_rate", type=float, default=1e-7)
+    parser.add_argument("--weight_decay", type=float, default=1e-5)
 
     args = parser.parse_args()
 
