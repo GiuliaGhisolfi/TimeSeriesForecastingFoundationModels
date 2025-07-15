@@ -17,7 +17,7 @@ from moirai_utils.moirai_utils import (get_train_and_val_datasets,
                                        pad_bool_tensor, pad_int_tensor,
                                        pad_tensor, to_timeseries_dataset)
 from uni2ts.data.loader import DataLoader
-from uni2ts.loss.packed import PackedNLLLoss
+from uni2ts.loss.packed import PackedNLLLoss, PackedNMAELoss, PackedNMSELoss, PackedMAPELoss
 from uni2ts.model.moirai import MoiraiFinetune, MoiraiModule
 
 torch.set_float32_matmul_precision('high')
@@ -58,7 +58,7 @@ def train(
     beta1=0.9,
     beta2=0.98,
     loss_func=PackedNLLLoss(),
-    val_metric=PackedNLLLoss(),
+    val_metric=[PackedNLLLoss(), PackedNMAELoss(), PackedNMSELoss(), PackedMAPELoss()],
     learning_rate=1e-5, # default: 1e-3
     weight_decay=1e-2
     ):
@@ -116,7 +116,7 @@ def train(
         callbacks=[checkpoint_all, early_stopping, stats_logger],
         log_every_n_steps=50,
         accumulate_grad_batches=1, # default
-        #precision="16-mixed", # mixed precision (fp16)
+        precision="bf16", # mixed precision (fp16)
         gradient_clip_val=5.0,  # gradient clipping
         gradient_clip_algorithm="value",  # default: "norm"
     )
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, default=MODEL_NAME)
     parser.add_argument("--epochs", type=int, default=EPOCHS)
     parser.add_argument("--patience", type=int, default=PATIENCE)
-    parser.add_argument("--batch_size", type=int, default=2)
+    parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument("--max_sequence_length", type=int, default=None)
     parser.add_argument("--min_patches", type=int, default=16)
     parser.add_argument("--min_mask_ratio", type=float, default=0.2)
