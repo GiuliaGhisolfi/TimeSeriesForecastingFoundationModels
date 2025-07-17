@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 from chronos.chronos_bolt import ChronosBoltPipeline
+from chronos.base import BaseChronosPipeline
 from chronos.chronos import ChronosModel, ChronosConfig
 from tqdm import tqdm
 from chronos_utils.chronos_dataset import ChronosDataset, has_enough_observations
@@ -21,7 +22,7 @@ import yaml
 
 
 DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/" # "data/"
-OUTPUT_DIR = "/raid/decaro/TimeSeriesForecastingFoundationModels/chronos_output"
+OUTPUT_DIR = "chronos_output"
 
 MODEL_NAME = "chronos-bolt-tiny" # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
 MODEL_MAP = {
@@ -60,7 +61,7 @@ def train(
     ):
     # Initialize ChronosModel
     model_path = MODEL_MAP[model_name]
-    pipeline = ChronosBoltPipeline.from_pretrained(model_path)
+    pipeline = ChronosBoltPipeline.from_pretrained(model_path) #BaseChronosPipeline.from_pretrained(model_path)
     
     with open("src/chronos_configs/chronos-bolt-tiny.yaml", "r") as f:
         config_dict = yaml.safe_load(f)
@@ -104,7 +105,7 @@ def train(
                 min_length= 64 + prediction_length,
                 max_missing_prop=0.9,
             ),
-            FileDataset(path=Path(data_path), freq="h"),
+            FileDataset(path=Path(data_path), freq="h"), #TODO
         )
         for data_path in training_data_paths
     ]

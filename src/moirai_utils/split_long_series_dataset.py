@@ -5,6 +5,7 @@ import numpy as np
 from datasets import Dataset, Features, Sequence, Value
 from tqdm import tqdm
 
+MIN_TS_LENGTH = 512
 
 def split_long_series_dataset(
     indexed_dataset: Dataset,
@@ -43,29 +44,35 @@ def split_long_series_dataset(
         num_slices = max((ts_len - total_length) // stride + 1, 0)
 
         if num_slices == 0:
-            new_samples.append({
-                "target": sample["target"],
-                "item_id": sample["item_id"],
-                "start": sample["start"],
-                "freq": sample["freq"],
-                "dataset": sample["dataset"],
-            })
-        else:
-            for i in range(num_slices):
-                start_idx = i * stride
-                end_idx = start_idx + total_length
-
-                sliced_target = ts[start_idx:end_idx, :] # shape: (total_length, 1)
-
+            if ts_len >= MIN_TS_LENGTH:
                 new_samples.append({
-                    "target": sliced_target.tolist(),
+                    "target": ts.tolist(), # keep only the first dimension
                     "item_id": sample["item_id"],
                     "start": sample["start"],
                     "freq": sample["freq"],
                     "dataset": sample["dataset"],
                 })
+        else:
+            for i in range(num_slices):
+                start_idx = i * stride
+                end_idx = start_idx + total_length
 
-    print(f"Created {len(new_samples)} sliced samples.")
-    full_dataset = Dataset.from_list(new_samples, features=features)
+                sliced_target = ts[start_idx:end_idx] # shape: (context + prediction, 1)
 
-    return full_dataset
+                if sliced_target.shape[0] >= MIN_TS_LENGTH:
+                    new_samples.append({
+                        "target": sliced_target.tolist(),
+                        "item_id": sample["item_id"],
+                        "start": sample["start"],
+                        "freq": sample["freq"],
+                        "dataset": sample["dataset"],
+                    })
+
+    if not new_samples:
+        print("No valid samples found after slicing.")
+        return None
+    else:
+        print(f"Created {len(new_samples)} sliced samples.")
+        full_dataset = Dataset.from_list(new_samples, features=features)
+
+        return full_dataset

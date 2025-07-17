@@ -162,8 +162,8 @@ def unify_target_shape(example):
         example["target"] = [[float(val) for val in row] for row in example["target"]]
     return example
 
-def stratified_split(test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=5000):
-    shutil.rmtree(f"{DATA_PATH}moirai_tmp", ignore_errors=True)
+def stratified_split(test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=3000):
+    """shutil.rmtree(f"{DATA_PATH}moirai_tmp", ignore_errors=True)
     os.makedirs(f"{DATA_PATH}moirai_tmp/train", exist_ok=True)
     os.makedirs(f"{DATA_PATH}moirai_tmp/val", exist_ok=True)
 
@@ -173,54 +173,60 @@ def stratified_split(test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=5000):
     val_chunk = []
 
     for ds_name in tqdm(dataset_name_list, desc="Loading + Splitting"):
-        ds = load_dataset_from_disk(ds_name.replace("/", "_"), path=f"{DATA_PATH}moirai_dataset_processed")
+        if os.path.exists(f"{DATA_PATH}moirai_dataset_processed/{ds_name.replace('/', '_')}"):
+            ds = load_dataset_from_disk(ds_name.replace("/", "_"), path=f"{DATA_PATH}moirai_dataset_processed")
 
-        groups = defaultdict(list)
-        for example in ds:
-            key = example["dataset"]
-            groups[key].append(example)
+            groups = defaultdict(list)
+            for example in ds:
+                key = example["dataset"]
+                groups[key].append(example)
 
-        for key, rows in groups.items():
-            rng.shuffle(rows)
-            n_val = int(len(rows) * test_size)
-            val_rows = rows[:n_val]
-            train_rows = rows[n_val:]
+            for key, rows in groups.items():
+                rng.shuffle(rows)
+                n_val = int(len(rows) * test_size)
+                val_rows = rows[:n_val]
+                train_rows = rows[n_val:]
 
-            train_chunk.extend(train_rows)
-            val_chunk.extend(val_rows)
+                train_chunk.extend(train_rows)
+                val_chunk.extend(val_rows)
 
-            if len(train_chunk) >= chunk_size:
+                if len(train_chunk) >= chunk_size:
+                    Dataset.from_list(train_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{train_idx}")
+                    train_chunk = []
+                    train_idx += 1
+
+                if len(val_chunk) >= chunk_size:
+                    Dataset.from_list(val_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{val_idx}")
+                    val_chunk = []
+                    val_idx += 1
+            
+            if train_chunk:
                 Dataset.from_list(train_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{train_idx}")
                 train_chunk = []
                 train_idx += 1
-
-            if len(val_chunk) >= chunk_size:
+            if val_chunk:
                 Dataset.from_list(val_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{val_idx}")
                 val_chunk = []
                 val_idx += 1
-        
-        if train_chunk:
-            Dataset.from_list(train_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{train_idx}")
-            train_chunk = []
-            train_idx += 1
-        if val_chunk:
-            Dataset.from_list(val_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{val_idx}")
-            val_chunk = []
-            val_idx += 1
 
-        del ds
-        del groups
+            del ds
+            del groups
 
-        print(f"{ds_name} done")
+            print(f"{ds_name} done")
+        else:
+            print(f"Dataset {ds_name} not found in {DATA_PATH}moirai_dataset_processed. Skipping...")
 
     if train_chunk:
         Dataset.from_list(train_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{train_idx}")
     else:
-        train_idx += 1
+        train_idx -= 1
     if val_chunk:
         Dataset.from_list(val_chunk).save_to_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{val_idx}")
     else:
-        val_idx -= 1
+        val_idx -= 1"""
+    
+    train_idx = 55
+    val_idx = 53
 
     train_datasets = [load_from_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{i}") for i in range(train_idx + 1)]
     val_datasets = [load_from_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{i}") for i in range(val_idx + 1)]
@@ -234,11 +240,10 @@ def stratified_split(test_size=TEST_SIZE, seed=RANDOM_SEED, chunk_size=5000):
 
 def to_timeseries_dataset(
     indexed_dataset,
-    context_length=2048,
     prediction_length=256,
     sample_time_series=SampleTimeSeriesType.NONE
 ):
-    transform = ToTorch(context_length=context_length, prediction_length=prediction_length)
+    transform = ToTorch(prediction_length=prediction_length)
     indexer = HuggingFaceDatasetIndexer(indexed_dataset)
     return TimeSeriesDataset(
         indexer=indexer,
@@ -272,17 +277,17 @@ def create_moirai_datasets(context_length=2048, prediction_length=256):
             prediction_length=prediction_length
         )
 
-        save_path = f"{ds_name.replace('/', '_')}"
-        indexed_dataset.save_to_disk(f"{DATA_PATH}moirai_dataset_processed/{save_path}")
+        if indexed_dataset:
+            save_path = f"{ds_name.replace('/', '_')}"
+            indexed_dataset.save_to_disk(f"{DATA_PATH}moirai_dataset_processed/{save_path}")
 
     print("Done :)")
 
 
-def save_moirai_datasets(stratify_col="dataset", context_length=2048, prediction_length=256,
-        test_size=TEST_SIZE, seed=RANDOM_SEED):
+def save_moirai_datasets(prediction_length=256, test_size=TEST_SIZE, seed=RANDOM_SEED):
     # Save datasets to disk
-    os.makedirs(F"{DATA_PATH}moirai_dataset_processed", exist_ok=True)
-    create_moirai_datasets(context_length, prediction_length)
+    """os.makedirs(F"{DATA_PATH}moirai_dataset_processed", exist_ok=True)
+    create_moirai_datasets(context_length, prediction_length)"""
 
     # Stratified split
     train_dataset, val_dataset = stratified_split(
@@ -291,12 +296,10 @@ def save_moirai_datasets(stratify_col="dataset", context_length=2048, prediction
     # Convert to TimeSeriesDataset
     train_dataset = to_timeseries_dataset(
         train_dataset,
-        context_length=context_length,
         prediction_length=prediction_length
         )
     val_dataset = to_timeseries_dataset(
         val_dataset,
-        context_length=context_length,
         prediction_length=prediction_length
         )
 

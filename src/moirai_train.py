@@ -94,7 +94,7 @@ def train(
     # Trainer
     logger = CSVLogger("logs", name=model_name)
     checkpoint_all = ModelCheckpoint(
-        dirpath="checkpoints",
+        dirpath="moirai_checkpoints",
         filename=f"{model_name}_epoch_{{epoch}}",
         every_n_epochs=1,
         save_top_k=-1

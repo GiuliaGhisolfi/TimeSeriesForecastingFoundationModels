@@ -101,7 +101,7 @@ def to_timeseries_dataset(
     prediction_length=256,
     sample_time_series=SampleTimeSeriesType.NONE
 ):
-    transform = ToTorch(context_length=context_length, prediction_length=prediction_length)
+    transform = ToTorch(prediction_length=prediction_length)
     indexer = HuggingFaceDatasetIndexer(indexed_dataset)
     return TimeSeriesDataset(
         indexer=indexer,

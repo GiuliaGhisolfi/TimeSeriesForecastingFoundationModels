@@ -1,7 +1,7 @@
 import pickle
 
 import pandas as pd
-from datasets import Dataset
+from datasets import Dataset, concatenate_datasets, load_from_disk
 
 
 def main():
@@ -54,19 +54,31 @@ def main():
 
     ##############################################################################
     """
+    DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/"
+    train_idx, val_idx = 55, 53
 
-    """ds = Dataset.load_from_disk("data/final_split_dataset")
+    train_datasets = [load_from_disk(f"{DATA_PATH}moirai_tmp/train/chunk_{i}") for i in range(train_idx + 1)]
+    val_datasets = [load_from_disk(f"{DATA_PATH}moirai_tmp/val/chunk_{i}") for i in range(val_idx + 1)]
 
-    def extract_info(example):
+    train_dataset = concatenate_datasets(train_datasets)
+    val_dataset = concatenate_datasets(val_datasets)
+
+    def extract_info(example, split):
         target = example["target"]
         return {
                 "ts_len": len(target),
                 "num_variates": len(target[0]) if target else 0,
+                "split": split,
             }
+    
+    train_dataset = train_dataset.map(lambda x: extract_info(x, "train"), desc="Extracting train dataset info")
+    df_train = train_dataset.to_pandas()[["dataset", "item_id", "start", "freq", "ts_len", "num_variates", "split"]]
+    
+    val_dataset = val_dataset.map(lambda x: extract_info(x, "val"), desc="Extracting validation dataset info")
+    df_val = val_dataset.to_pandas()[["dataset", "item_id", "start", "freq", "ts_len", "num_variates", "split"]]
 
-    ds = ds.map(extract_info, desc="Extracting time series info")
-    df = ds.to_pandas()[["dataset", "item_id", "start", "freq", "ts_len", "num_variates"]]
-    df.to_csv("results/dataset_splitted_info.csv", index=False)"""
+    df = pd.concat([df_train, df_val], ignore_index=True)
+    df.to_csv("results/dataset_splitted_info.csv", index=False)
 
     ##############################################################################
 
@@ -99,7 +111,7 @@ def main():
     df["ts_len"] = ts_len
     df["split"] = split
 
-    df.to_csv("/raid/decaro/TimeSeriesForecastingFoundationModels/results/dataset_splitted_train_val_info.csv")
+    df.to_csv("results/dataset_splitted_train_val_info.csv")
 
     print("Done :)")
 
