@@ -4,6 +4,6 @@ data/splitted_moirai_dataset
 data/splitted_moirai_dataset.zip
 results
 results_moirai
-checkpoints
+moirai_checkpoints
 logs
 chronos_output

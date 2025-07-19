@@ -1,16 +1,3 @@
-from collections import defaultdict
-
-import numpy as np
-import os
-import pandas as pd
-from datasets import load_from_disk
-from tqdm import tqdm
-import json
-from datasets import Dataset, concatenate_datasets, load_from_disk
-import gzip
-
-DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/" # "data/"
-
 dataset_name_list = [
     "autogluon_chronos_datasets_electricity_15min",
     "autogluon_chronos_datasets_mexico_city_bikes",
@@ -136,41 +123,3 @@ dataset_name_list = [
     "Salesforce_lotsa_data_wiki-rolling_nips",
     "Salesforce_lotsa_data_wind_farms_with_missing"
 ]
-
-
-def load_dataset_from_disk(dataset_name, path=f"{DATA_PATH}splitted_moirai_dataset"):
-    save_path = f"{path}/{dataset_name.replace('/', '_')}"
-    
-    if os.path.exists(save_path):
-        return Dataset.load_from_disk(save_path)
-    else:
-        raise FileNotFoundError(f"Dataset {dataset_name} not found in {save_path}")
-    
-def make_json_serializable(obj):
-    if isinstance(obj, (pd.Timestamp, np.datetime64)):
-        return str(obj)
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    if isinstance(obj, (np.float32, np.float64)):
-        return float(obj)
-    if isinstance(obj, (np.int32, np.int64)):
-        return int(obj)
-    return obj  # fallback
-
-def main():
-    output_file = DATA_PATH+"dataset_gluonts.jsonl"
-
-    with open(output_file, "w", encoding="utf-8") as f:
-        for ds_name in tqdm(dataset_name_list, desc="Preparing data"):
-            ds = load_dataset_from_disk(ds_name)
-            print(f"Loaded {ds_name} dataset.")
-        
-            for example in ds:
-                example_serializable = {k: make_json_serializable(v) for k, v in example.items()}
-                json.dump(example_serializable, f)
-                f.write("\n")
-
-    print("Done :)")
-
-if __name__ == "__main__":
-    main()

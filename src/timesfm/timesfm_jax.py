@@ -17,7 +17,7 @@ import logging
 import multiprocessing
 import time
 from os import path
-from typing import Any, Sequence
+from typing import Any, Sequence, Union
 
 import einshape as es
 import jax
@@ -239,9 +239,9 @@ class TimesFmJax(timesfm_base.TimesFmBase):
   def _forecast(
       self,
       inputs: Sequence[Any],
-      freq: Sequence[int] | None = None,
-      window_size: int | None = None,
-      forecast_context_len: int | None = None,
+      freq: Union[Sequence[int], None] = None,
+      window_size: Union[int, None] = None,
+      forecast_context_len: Union[int, None] = None,
       return_forecast_on_context: bool = False,
   ) -> tuple[np.ndarray, np.ndarray]:
     """Forecasts on a list of time series.

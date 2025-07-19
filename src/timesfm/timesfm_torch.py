@@ -15,7 +15,7 @@
 
 import logging
 from os import path
-from typing import Any, Sequence
+from typing import Any, Sequence, Union
 
 import numpy as np
 import torch
@@ -61,7 +61,7 @@ class TimesFmTorch(timesfm_base.TimesFmBase):
           snapshot_download(repo_id, local_dir=checkpoint.local_dir),
           "torch_model.ckpt")
     self._model = ppd.PatchedTimeSeriesDecoder(self._model_config)
-    loaded_checkpoint = torch.load(checkpoint_path, weights_only=True)
+    loaded_checkpoint = torch.load(checkpoint_path) #, weights_only=True)
     logging.info("Loading checkpoint from %s", checkpoint_path)
     self._model.load_state_dict(loaded_checkpoint)
     logging.info("Sending checkpoint to device %s", f"{self._device}")
@@ -72,9 +72,9 @@ class TimesFmTorch(timesfm_base.TimesFmBase):
   def _forecast(
       self,
       inputs: Sequence[Any],
-      freq: Sequence[int] | None = None,
-      window_size: int | None = None,
-      forecast_context_len: int | None = None,
+      freq: Union[Sequence[int], None] = None,
+      window_size: Union[int, None] = None,
+      forecast_context_len: Union[int, None] = None,
       return_forecast_on_context: bool = False,
   ) -> tuple[np.ndarray, np.ndarray]:
     """Forecasts on a list of time series.

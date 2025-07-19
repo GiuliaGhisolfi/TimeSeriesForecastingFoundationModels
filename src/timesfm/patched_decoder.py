@@ -401,7 +401,7 @@ class PatchedTimeSeriesDecoder(base_layer.BaseLayer):
       inputs: NestedMap,
       horizon_len: int,
       output_patch_len: Optional[int] = None,
-      max_len: int | None = None,
+      max_len: Union[int, None] = None,
       return_forecast_on_context: bool = False,
   ) -> tuple[JTensor, JTensor]:
     """Auto-regressive decoding without caching.

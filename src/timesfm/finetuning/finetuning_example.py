@@ -18,7 +18,7 @@ import torch
 import torch.multiprocessing as mp
 import yfinance as yf
 from absl import app, flags
-from finetuning.finetuning_torch import FinetuningConfig, TimesFMFinetuner
+from timesfm.finetuning.finetuning_torch import FinetuningConfig, TimesFMFinetuner
 from huggingface_hub import snapshot_download
 from torch.utils.data import Dataset
 

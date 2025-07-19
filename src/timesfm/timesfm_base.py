@@ -17,7 +17,7 @@ import collections
 import dataclasses
 import logging
 import multiprocessing
-from typing import Any, Literal, Sequence, TYPE_CHECKING
+from typing import Any, Literal, Sequence, TYPE_CHECKING, Union
 
 import numpy as np
 import pandas as pd
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     Category = xreg_lib.Category
     XRegMode = xreg_lib.XRegMode
 else:
-    Category = int | str
+    Category = Union[int, str]
     XRegMode = str
 
 _TOL = 1e-6
@@ -132,7 +132,7 @@ def _renormalize(batch, stats):
   return [x * stat[1] + stat[0] for x, stat in zip(batch, stats)]
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass()
 class TimesFmHparams:
   """Hparams used to initialize a TimesFM model for inference.
 
@@ -165,13 +165,13 @@ class TimesFmHparams:
   model_dims: int = 1280
   per_core_batch_size: int = 32
   backend: Literal["cpu", "gpu", "tpu"] = "cpu"
-  quantiles: Sequence[float] | None = DEFAULT_QUANTILES
+  quantiles: Union[Sequence[float], None] = DEFAULT_QUANTILES
   use_positional_embedding: bool = True
   # Hparams beyond the model.
   point_forecast_mode: Literal["mean", "median"] = "median"
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass()
 class TimesFmCheckpoint:
   """Checkpoint used to initialize a TimesFM model for inference.
 
@@ -186,11 +186,11 @@ class TimesFmCheckpoint:
   """
 
   version: str = "jax"
-  path: str | None = None
-  huggingface_repo_id: str | None = None
+  path: Union[str, None] = None
+  huggingface_repo_id: Union[str, None] = None
   type: Any = None
-  step: int | None = None
-  local_dir: str | None = None
+  step: Union[int, None] = None
+  local_dir: Union[str, None] = None
 
 
 class TimesFmBase:
@@ -305,9 +305,9 @@ class TimesFmBase:
   def _forecast(
       self,
       inputs: Sequence[Any],
-      freq: Sequence[int] | None = None,
-      window_size: int | None = None,
-      forecast_context_len: int | None = None,
+      freq: Union[Sequence[int], None] = None,
+      window_size: Union[int, None] = None,
+      forecast_context_len: Union[int, None] = None,
       return_forecast_on_context: bool = False,
   ) -> tuple[np.ndarray, np.ndarray]:
     """Forecasts on a list of time series.
@@ -338,9 +338,9 @@ class TimesFmBase:
   def forecast(
       self,
       inputs: Sequence[Any],
-      freq: Sequence[int] | None = None,
-      window_size: int | None = None,
-      forecast_context_len: int | None = None,
+      freq: Union[Sequence[int], None] = None,
+      window_size: Union[int, None] = None,
+      forecast_context_len: Union[int, None] = None,
       return_forecast_on_context: bool = False,
       normalize: bool = False,
   ) -> tuple[np.ndarray, np.ndarray]:
@@ -420,16 +420,16 @@ class TimesFmBase:
   def forecast_with_covariates(
       self,
       inputs: list[Sequence[float]],
-      dynamic_numerical_covariates: (dict[str, Sequence[Sequence[float]]] |
-                                     None) = None,
-      dynamic_categorical_covariates: (dict[str, Sequence[Sequence[Category]]] |
-                                       None) = None,
-      static_numerical_covariates: dict[str, Sequence[float]] | None = None,
-      static_categorical_covariates: (dict[str, Sequence[Category]] |
-                                      None) = None,
-      freq: Sequence[int] | None = None,
-      window_size: int | None = None,
-      forecast_context_len: int | None = None,
+      dynamic_numerical_covariates: (Union[dict[str, Sequence[Sequence[float]]],
+                                     None]) = None,
+      dynamic_categorical_covariates: (Union[dict[str, Sequence[Sequence[Category]]],
+                                       None]) = None,
+      static_numerical_covariates: Union[dict[str, Sequence[float]], None] = None,
+      static_categorical_covariates: (Union[dict[str, Sequence[Category]],
+                                      None]) = None,
+      freq: Union[Sequence[int], None] = None,
+      window_size: Union[int, None] = None,
+      forecast_context_len: Union[int, None] = None,
       xreg_mode: XRegMode = "xreg + timesfm",
       normalize_xreg_target_per_input: bool = True,
       ridge: float = 0.0,
@@ -639,7 +639,7 @@ class TimesFmBase:
       forecast_context_len: int = 0,
       value_name: str = "values",
       model_name: str = "timesfm",
-      window_size: int | None = None,
+      window_size: Union[int, None] = None,
       num_jobs: int = 1,
       normalize: bool = False,
       verbose: bool = True,

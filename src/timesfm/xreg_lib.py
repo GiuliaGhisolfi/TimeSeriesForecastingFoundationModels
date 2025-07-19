@@ -15,14 +15,14 @@
 
 import itertools
 import math
-from typing import Any, Iterable, Literal, Mapping, Sequence
+from typing import Any, Iterable, Literal, Mapping, Sequence, Union
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 from sklearn import preprocessing
 
-Category = int | str
+Category = Union[int, str]
 
 _TOL = 1e-6
 XRegMode = Literal["timesfm + xreg", "xreg + timesfm"]
@@ -84,16 +84,16 @@ class BatchedInContextXRegBase:
       train_lens: Sequence[int],
       test_lens: Sequence[int],
       train_dynamic_numerical_covariates: (
-          Mapping[str, Sequence[Sequence[float]]] | None) = None,
+          Union[Mapping[str, Sequence[Sequence[float]]], None]) = None,
       train_dynamic_categorical_covariates: (
-          Mapping[str, Sequence[Sequence[Category]]] | None) = None,
+          Union[Mapping[str, Sequence[Sequence[Category]]], None]) = None,
       test_dynamic_numerical_covariates: (
-          Mapping[str, Sequence[Sequence[float]]] | None) = None,
+          Union[Mapping[str, Sequence[Sequence[float]]], None]) = None,
       test_dynamic_categorical_covariates: (
-          Mapping[str, Sequence[Sequence[Category]]] | None) = None,
-      static_numerical_covariates: Mapping[str, Sequence[float]] | None = None,
-      static_categorical_covariates: (Mapping[str, Sequence[Category]] |
-                                      None) = None,
+          Union[Mapping[str, Sequence[Sequence[Category]]], None]) = None,
+      static_numerical_covariates: Union[Mapping[str, Sequence[float]], None] = None,
+      static_categorical_covariates: (Union[Mapping[str, Sequence[Category]],
+                                      None]) = None,
   ) -> None:
     """Initializes with the exogenous covariate inputs.
 
@@ -297,7 +297,7 @@ class BatchedInContextXRegBase:
 
   def create_covariate_matrix(
       self,
-      one_hot_encoder_drop: str | None = "first",
+      one_hot_encoder_drop: Union[str, None] = "first",
       use_intercept: bool = True,
       assert_covariates: bool = False,
       assert_covariate_shapes: bool = False,
@@ -384,7 +384,7 @@ class BatchedInContextXRegLinear(BatchedInContextXRegBase):
   def fit(
       self,
       ridge: float = 0.0,
-      one_hot_encoder_drop: str | None = "first",
+      one_hot_encoder_drop: Union[str, None] = "first",
       use_intercept: bool = True,
       force_on_cpu: bool = False,
       max_rows_per_col: int = 0,

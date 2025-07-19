@@ -15,7 +15,7 @@
 
 import dataclasses
 import math
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -371,8 +371,8 @@ class TimesFMAttention(nn.Module):
       self,
       hidden_states: torch.Tensor,
       mask: torch.Tensor,
-      kv_write_indices: torch.Tensor | None = None,
-      kv_cache: Tuple[torch.Tensor, torch.Tensor] | None = None,
+      kv_write_indices: Union[torch.Tensor, None] = None,
+      kv_cache: Union[Tuple[torch.Tensor, torch.Tensor], None] = None,
   ) -> torch.Tensor:
     hidden_states_shape = hidden_states.shape
     assert len(hidden_states_shape) == 3
@@ -455,8 +455,8 @@ class TimesFMDecoderLayer(nn.Module):
       hidden_states: torch.Tensor,
       mask: torch.Tensor,
       paddings: torch.Tensor,
-      kv_write_indices: torch.Tensor | None = None,
-      kv_cache: Tuple[torch.Tensor, torch.Tensor] | None = None,
+      kv_write_indices: Union[torch.Tensor, None] = None,
+      kv_cache: Union[Tuple[torch.Tensor, torch.Tensor], None] = None,
   ) -> torch.Tensor:
     # Self Attention
     residual = hidden_states
@@ -506,8 +506,8 @@ class StackedDecoder(nn.Module):
       self,
       hidden_states: torch.Tensor,
       paddings: torch.Tensor,
-      kv_write_indices: torch.Tensor | None = None,
-      kv_caches: List[Tuple[torch.Tensor, torch.Tensor]] | None = None,
+      kv_write_indices: Union[torch.Tensor, None] = None,
+      kv_caches: Union[List[Tuple[torch.Tensor, torch.Tensor]], None] = None,
   ) -> torch.Tensor:
     padding_mask = convert_paddings_to_mask(paddings, hidden_states.dtype)
     atten_mask = causal_mask(hidden_states)
@@ -647,7 +647,7 @@ class PatchedTimeSeriesDecoder(nn.Module):
   ) -> tuple[
       torch.Tensor,
       torch.Tensor,
-      tuple[torch.Tensor, torch.Tensor] | None,
+      Union[tuple[torch.Tensor, torch.Tensor], None],
       torch.Tensor,
   ]:
     """Preprocess input for stacked transformer."""
@@ -729,8 +729,8 @@ class PatchedTimeSeriesDecoder(nn.Module):
       paddings: torch.Tensor,
       freq: torch.LongTensor,
       horizon_len: int,
-      output_patch_len: int | None = None,
-      max_len: int | None = None,
+      output_patch_len: Union[int, None] = None,
+      max_len: Union[int, None] = None,
       return_forecast_on_context: bool = False,
   ) -> tuple[torch.Tensor, torch.Tensor]:
     """Auto-regressive decoding without caching.

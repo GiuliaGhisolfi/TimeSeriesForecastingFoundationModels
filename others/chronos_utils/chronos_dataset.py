@@ -260,17 +260,10 @@ class ChronosDataset(IterableDataset, ShuffleMixin):
                 ],
                 axis=-1,
             )
-
-            # labels for causal models are same as the input_ids.
-            # Internally transformers shifts the labels by one during training.
-            labels = input_ids.clone()
-            input_ids[~attention_mask] = self.tokenizer.config.pad_token_id
-            labels[~attention_mask] = -100
         
         return {
             "input_ids": input_ids.squeeze(0),
             "attention_mask": attention_mask.squeeze(0),
-            "labels": labels.squeeze(0),
         }
 
     def __iter__(self) -> Iterator:
