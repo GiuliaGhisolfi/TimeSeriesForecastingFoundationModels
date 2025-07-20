@@ -17,6 +17,7 @@ def create_output_file(output_file_name, output_dir="results"):
             [
                 "dataset",
                 "model",
+                "train_step",
                 "eval_metrics/MSE[mean]",
                 "eval_metrics/MSE[0.5]",
                 "eval_metrics/MAE[0.5]",
@@ -34,7 +35,7 @@ def create_output_file(output_file_name, output_dir="results"):
         )
 
 
-def save_results(res, ds_config, model_name, domain, num_variates, ds_name, csv_file_path):
+def save_results(res, ds_config, model_name, train_step, domain, num_variates, ds_name, csv_file_path):
     # Append the results to the CSV file
     with open(csv_file_path, "a", newline="") as csvfile:
         writer = csv.writer(csvfile)
@@ -42,6 +43,7 @@ def save_results(res, ds_config, model_name, domain, num_variates, ds_name, csv_
             [
                 ds_config,
                 model_name,
+                train_step,
                 res["MSE[mean]"][0],
                 res["MSE[0.5]"][0],
                 res["MAE[0.5]"][0],

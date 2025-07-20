@@ -7,7 +7,7 @@ from gluonts.model import Forecast
 from gluonts.model.forecast import QuantileForecast
 from tqdm.auto import tqdm
 
-import src.uni2ts as timesfm
+import timesfm as timesfm
 
 
 def get_model(model_path, backend="gpu"):

@@ -18,7 +18,7 @@ import os
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Union
 
 import datasets
 import pyarrow.compute as pc
@@ -121,7 +121,7 @@ class Dataset:
     def __init__(
         self,
         name: str,
-        term: Term | str = Term.SHORT,
+        term: Union[Term, str] = Term.SHORT,
         to_univariate: bool = False,
         storage_env_var: str = "GIFT_EVAL",
     ):

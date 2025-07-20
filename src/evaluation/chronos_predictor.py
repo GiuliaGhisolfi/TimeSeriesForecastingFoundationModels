@@ -11,6 +11,21 @@ from tqdm.auto import tqdm
 
 from src.chronos import BaseChronosPipeline, ForecastType
 
+from transformers import AutoConfig
+from src.chronos.chronos_bolt import ChronosBoltConfig
+
+def clean_chronos_config(kwargs):
+    if "chronos_config" in kwargs:
+        # Ottieni i nomi degli argomenti accettati dal costruttore di ChronosBoltConfig
+        accepted_keys = ChronosBoltConfig.__init__.__code__.co_varnames
+        accepted_keys = set(accepted_keys) - {"self", "args", "kwargs"}
+        
+        # Filtra solo quelli accettati
+        kwargs["chronos_config"] = {
+            k: v for k, v in kwargs["chronos_config"].items()
+            if k in accepted_keys
+        }
+    return kwargs
 
 @dataclass
 class ModelConfig:
@@ -60,8 +75,19 @@ class ChronosPredictor:
         )
 
         print("prediction_length:", prediction_length)
+        kwargs = {
+            "chronos_config": AutoConfig.from_pretrained(model_path).chronos_config,
+        }
+        kwargs = clean_chronos_config(kwargs)
+        kwargs["chronos_config"].update({
+            "input_patch_size": 16,
+            "input_patch_stride": 8,
+            "quantiles": [0.1, 0.5, 0.9],
+        })
+
         self.pipeline = BaseChronosPipeline.from_pretrained(
             model_path,
+            ignore_mismatched_sizes=True,
             *args,
             **kwargs,
         )

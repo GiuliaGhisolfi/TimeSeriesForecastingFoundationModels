@@ -17,9 +17,8 @@ from transformers import (
     PreTrainedModel,
 )
 
-import chronos
-from chronos.base import BaseChronosPipeline, ForecastType
-from chronos.utils import left_pad_and_stack_1D
+from src.chronos.base import BaseChronosPipeline, ForecastType
+from src.chronos.utils import left_pad_and_stack_1D
 
 logger = logging.getLogger(__file__)
 
