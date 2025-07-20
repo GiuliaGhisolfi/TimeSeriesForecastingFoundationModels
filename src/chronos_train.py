@@ -21,6 +21,7 @@ from transformers import (
     TrainingArguments,
 )
 from gluonts.dataset.common import FileDataset
+from gluonts.transform import Chain
 from gluonts.itertools import Filter
 from gluonts.transform import LastValueImputation
 
@@ -30,7 +31,10 @@ from chronos_utils.callback import LogCallback
 from chronos_utils.chronos_dataset import *
 from chronos_utils.logger import *
 
-DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/"
+from chronos_utils.dataset_name import DATASET_NAME_LIST
+from chronos_utils.frequency_map import FREQ_MAP
+
+DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/dataset_gluonts/"
 MODEL_NAME = "chronos-bolt-tiny"  # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
 
 RANDOM_SEED = 42
@@ -137,9 +141,7 @@ def main(
     raw_training_config = deepcopy(locals())
     output_dir = Path(output_dir)
     
-    training_data_paths = [
-        DATA_PATH+"dataset_gluonts.jsonl"
-        ]
+    training_data_paths = DATASET_NAME_LIST
 
     if isinstance(probability, str):
         probability = ast.literal_eval(probability)
@@ -184,7 +186,7 @@ def main(
                 min_length=min_past + prediction_length,
                 max_missing_prop=max_missing_prop,
             ),
-            FileDataset(path=Path(data_path), freq="h"),
+            FileDataset(path=Path(DATA_PATH+data_path+".jsonl"), freq=FREQ_MAP[data_path]),
         )
         for data_path in training_data_paths
     ]

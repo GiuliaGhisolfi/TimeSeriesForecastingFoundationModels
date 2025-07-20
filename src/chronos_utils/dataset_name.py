@@ -1,14 +1,4 @@
-import numpy as np
-import os
-import pandas as pd
-from tqdm import tqdm
-import json
-from datasets import Dataset
-import math
-
-DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/" # "data/"
-
-dataset_name_list = [
+DATASET_NAME_LIST = [
     "autogluon_chronos_datasets_electricity_15min",
     "autogluon_chronos_datasets_mexico_city_bikes",
     "autogluon_chronos_datasets_monash_electricity_hourly",
@@ -133,54 +123,3 @@ dataset_name_list = [
     "Salesforce_lotsa_data_wiki-rolling_nips",
     "Salesforce_lotsa_data_wind_farms_with_missing"
 ]
-
-
-def load_dataset_from_disk(dataset_name, path=f"{DATA_PATH}splitted_moirai_dataset"):
-    save_path = f"{path}/{dataset_name.replace('/', '_')}"
-    
-    if os.path.exists(save_path):
-        return Dataset.load_from_disk(save_path)
-    else:
-        raise FileNotFoundError(f"Dataset {dataset_name} not found in {save_path}")
-    
-def make_json_serializable(obj):
-    if isinstance(obj, (pd.Timestamp, np.datetime64)):
-        return str(obj)
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    if isinstance(obj, (np.float32, np.float64)):
-        return float(obj)
-    if isinstance(obj, (np.int32, np.int64)):
-        return int(obj)
-    return obj  # fallback
-
-def main():
-    os.makedirs(DATA_PATH + "dataset_gluonts", exist_ok=True)
-
-    for ds_name in tqdm(dataset_name_list, desc="Preparing data"):
-        ds = load_dataset_from_disk(ds_name)
-        print(f"Loaded {ds_name} dataset.")
-        
-        output_file = DATA_PATH+"dataset_gluonts/"+ds_name+".jsonl"
-
-        if os.path.exists(output_file):
-            os.remove(output_file)
-        
-        with open(output_file, "w", encoding="utf-8") as f:
-            for example in ds:
-                target = example.get("target")
-
-                if isinstance(target, list) and target and isinstance(target[0], list):
-                    target = [v[0] for v in target]
-                
-                target = [0.0 if (t is None or (isinstance(t, float) and math.isnan(t))) else t for t in target]
-                example["target"] = target
-                
-                example_serializable = {k: make_json_serializable(v) for k, v in example.items()}
-                json.dump(example_serializable, f)
-                f.write("\n")
-
-    print("Done :)")
-
-if __name__ == "__main__":
-    main()

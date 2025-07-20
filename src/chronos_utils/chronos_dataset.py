@@ -1,14 +1,13 @@
 import itertools
 from functools import partial
-from typing import List, Iterator, Optional, Dict
+from typing import List, Iterator, Optional
 
-from typer_config import use_yaml_config
 import numpy as np
 import torch
 from torch.utils.data import IterableDataset, get_worker_info
 
-from gluonts.dataset.common import FileDataset
-from gluonts.itertools import Cyclic, Map, Filter
+from gluonts.transform import Transformation
+from gluonts.itertools import Cyclic, Map
 from gluonts.transform import (
     FilterTransformation,
     TestSplitSampler,
@@ -44,6 +43,17 @@ def has_enough_observations(
     ):
         return True
     return False
+
+def select_first_dimension(entry: dict) -> dict:
+    target = np.asarray(entry["target"], dtype=np.float32)
+
+    if target.ndim == 2 and target.shape[1] > 1: # First dimension only
+        target = target[:, 0]  # (T, D) → (T,)
+    elif target.ndim == 2 and target.shape[1] == 1:
+        target = target[:, 0]  # (T, 1) → (T,)
+
+    entry["target"] = target
+    return entry
 
 
 class PseudoShuffledIterableDataset(IterableDataset):
@@ -159,6 +169,7 @@ class ChronosDataset(IterableDataset, ShuffleMixin):
 
     def preprocess_entry(self, entry: dict, mode: str) -> dict:
         entry = {f: entry[f] for f in ["start", "target"]}
+        #entry = select_first_dimension(entry) #FIXME: my code
         entry["target"] = np.asarray(entry["target"], dtype=self.np_dtype)
         assert entry["target"].ndim == 1, f"got {entry['target'].ndim=}, expected 1"
 
