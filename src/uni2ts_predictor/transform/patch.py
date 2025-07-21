@@ -16,7 +16,7 @@
 import abc
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -24,7 +24,7 @@ from einops import rearrange
 from gluonts.time_feature import norm_freq_str
 from jaxtyping import Num
 
-from uni2ts_predictor.common.typing import UnivarTimeSeries
+from uni2ts.common.typing import UnivarTimeSeries
 
 from ._base import Transformation
 from ._mixin import MapFuncMixin
@@ -58,15 +58,51 @@ class DefaultPatchSizeConstraints(PatchSizeConstraints):
     # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
     DEFAULT_RANGES = {
         "S": (64, 128),  # 512s = 8.53min, 4096s = 68.26min
+        "s": (64, 128),
+
         "T": (32, 128),  # 64min = 1.07h, 512min = 8.53h
+        "5T": (32, 128),
+        "15T": (32, 128),
+        "30T": (32, 128),
+        "min": (32, 128),
+
         "H": (32, 64),  # 128h = 5.33days
+        "h": (32, 64),
+        "cbh": (32, 64),
+        "bh": (32, 64),
+
         "D": (16, 32),
         "B": (16, 32),
+        "C": (16, 32),
+
         "W": (16, 32),
+        "W-SUN": (16, 32),
+
         "M": (8, 32),
+        "MS": (8, 32),
+        "ME": (8, 32),
+        "SMS": (8, 32),
+        "SME": (8, 32),
+        "BMS": (8, 32),
+        "BME": (8, 32),
+        "CBMS": (8, 32),
+        "CBME": (8, 32),
+
+
         "Q": (1, 8),
+        "Q-DEC": (1, 8),
+        "QS": (1, 8),
+        "QE": (1, 8),
+        "BQS": (1, 8),
+        "BQE": (1, 8),
+
         "Y": (1, 8),
+        "YS": (1, 8),
+        "YE": (1, 8),
+        "BYS": (1, 8),
+        "BYE": (1, 8),
         "A": (1, 8),
+        "A-DEC": (1, 8),
     }
 
     def _get_boundaries(self, n: int, offset_name: str) -> tuple[int, int]:
@@ -78,7 +114,7 @@ class DefaultPatchSizeConstraints(PatchSizeConstraints):
 class GetPatchSize(Transformation):
     min_time_patches: int
     target_field: str = "target"
-    patch_sizes: tuple[int, ...] | list[int] | range = (8, 16, 32, 64, 128)
+    patch_sizes: Union[tuple[int, ...], list[int], range] = (8, 16, 32, 64, 128)
     patch_size_constraints: PatchSizeConstraints = DefaultPatchSizeConstraints()
     offset: bool = True
 
@@ -125,7 +161,7 @@ class Patchify(MapFuncMixin, Transformation):
     max_patch_size: int
     fields: tuple[str, ...] = ("target",)
     optional_fields: tuple[str, ...] = ("past_feat_dynamic_real",)
-    pad_value: int | float = 0
+    pad_value: Union[int, float] = 0
 
     def __call__(self, data_entry: dict[str, Any]) -> dict[str, Any]:
         patch_size = data_entry["patch_size"]

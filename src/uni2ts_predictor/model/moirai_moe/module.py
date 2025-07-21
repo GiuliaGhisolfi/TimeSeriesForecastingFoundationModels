@@ -20,23 +20,24 @@ import torch.nn.functional as F
 from huggingface_hub import PyTorchModelHubMixin
 from hydra.utils import instantiate
 from jaxtyping import Bool, Float, Int
+from typing import Union
 from torch import nn
 from torch.distributions import Distribution
 from torch.utils._pytree import tree_map
 
-from uni2ts_predictor.common.torch_util import packed_causal_attention_mask
-from uni2ts_predictor.distribution import DistributionOutput
-from uni2ts_predictor.module.norm import RMSNorm
-from uni2ts_predictor.module.packed_scaler import PackedNOPScaler, PackedStdScaler
-from uni2ts_predictor.module.position import (BinaryAttentionBias, QueryKeyProjection,
+from uni2ts.common.torch_util import packed_causal_attention_mask
+from uni2ts.distribution import DistributionOutput
+from uni2ts.module.norm import RMSNorm
+from uni2ts.module.packed_scaler import PackedNOPScaler, PackedStdScaler
+from uni2ts.module.position import (BinaryAttentionBias, QueryKeyProjection,
                                     RotaryProjection)
-from uni2ts_predictor.module.transformer import TransformerEncoder
-from uni2ts_predictor.module.ts_embed import FeatLinear, MultiInSizeLinear
+from uni2ts.module.transformer import TransformerEncoder
+from uni2ts.module.ts_embed import FeatLinear, MultiInSizeLinear
 
 
 def encode_distr_output(
     distr_output: DistributionOutput,
-) -> dict[str, str | float | int]:
+) -> dict[str, Union[str, float, int]]:
     """Serialization function for DistributionOutput"""
 
     def _encode(val):
@@ -51,7 +52,7 @@ def encode_distr_output(
     return _encode(distr_output)
 
 
-def decode_distr_output(config: dict[str, str | float | int]) -> DistributionOutput:
+def decode_distr_output(config: dict[str, Union[str, float, int]]) -> DistributionOutput:
     """Deserialization function for DistributionOutput"""
     return instantiate(config, _convert_="all")
 

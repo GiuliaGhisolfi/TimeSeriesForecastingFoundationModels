@@ -17,7 +17,7 @@ import itertools
 from collections import defaultdict, deque
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Union
 
 import numpy as np
 import torch
@@ -25,7 +25,7 @@ from jaxtyping import Bool, Int
 from torch.utils.data import DataLoader as TorchDataLoader
 from torch.utils.data import Dataset, Sampler, default_collate, default_convert
 
-from moirai.common.typing import BatchedSample, Sample
+from uni2ts.common.typing import BatchedSample, Sample
 
 
 @dataclass
@@ -69,7 +69,7 @@ class PadCollate(Collate):
 
         sample_id = self.get_sample_id(batch)
         padded_batch = self.pad_samples(batch)
-        merged_batch = padded_batch | dict(sample_id=sample_id)
+        merged_batch = {**padded_batch, "sample_id": sample_id} # Union[padded_batch, dict(sample_id=sample_id)]
         return merged_batch
 
     def pad_samples(self, batch: list[Sample]) -> BatchedSample:
@@ -271,14 +271,14 @@ class BatchedSampleQueue:
                 ]
             ), "batch must have the same schema as the first batch"
 
-    def append(self, batch: SliceableBatchedSample | BatchedSample):
+    def append(self, batch: Union[SliceableBatchedSample, BatchedSample]):
         """Appends a batch to the end of the queue."""
         if not isinstance(batch, SliceableBatchedSample):
             batch = SliceableBatchedSample(batch)
         self._check_schema(batch)
         self.container.append(batch)
 
-    def appendleft(self, batch: SliceableBatchedSample | BatchedSample):
+    def appendleft(self, batch: Union[SliceableBatchedSample, BatchedSample]):
         """Appends a batch to the start of the queue."""
         if not isinstance(batch, SliceableBatchedSample):
             batch = SliceableBatchedSample(batch)

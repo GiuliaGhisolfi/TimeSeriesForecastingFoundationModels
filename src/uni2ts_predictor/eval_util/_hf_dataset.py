@@ -2,7 +2,7 @@ from pathlib import Path
 
 import datasets
 
-from uni2ts_predictor.common.env import env
+from uni2ts.common.env import env
 
 
 class HFDataset:

@@ -15,24 +15,26 @@
 
 import abc
 from collections.abc import Callable, Sequence
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import torch
 from einops import rearrange
-from jaxtyping import Float, PyTree
+from jaxtyping import Float
 from torch import nn
 from torch.distributions import (AffineTransform, Distribution,
                                  TransformedDistribution)
 from torch.utils._pytree import tree_flatten, tree_map, tree_unflatten
 
-from uni2ts_predictor.common.core import abstract_class_property
-from uni2ts_predictor.module.ts_embed import MultiOutSizeLinear
+from uni2ts.common.core import abstract_class_property
+from uni2ts.module.ts_embed import MultiOutSizeLinear
+
+PyTree = Any
 
 
 # TODO: Replace with tree_map when multiple trees supported
 def tree_map_multi(
-    func: Callable, tree: PyTree[Any, "T"], *other: PyTree[Any, "T"]
-) -> PyTree[Any, "T"]:
+    func: Callable, tree: PyTree, *other: PyTree
+) -> PyTree:
     """Tree map with function requiring multiple inputs, where other inputs are from a PyTree too."""
     leaves, treespec = tree_flatten(tree)
     other_leaves = [tree_flatten(o)[0] for o in other]
@@ -40,7 +42,7 @@ def tree_map_multi(
     return tree_unflatten(return_leaves, treespec)
 
 
-def convert_to_module(tree: PyTree[nn.Module, "T"]) -> PyTree[nn.Module, "T"]:
+def convert_to_module(tree: PyTree) -> PyTree:
     """Convert a simple container PyTree into an nn.Module PyTree"""
     if isinstance(tree, dict):
         return nn.ModuleDict(
@@ -51,7 +53,7 @@ def convert_to_module(tree: PyTree[nn.Module, "T"]) -> PyTree[nn.Module, "T"]:
     return tree
 
 
-def convert_to_container(tree: PyTree[nn.Module, "T"]) -> PyTree[nn.Module, "T"]:
+def convert_to_container(tree: PyTree) -> PyTree:
     """Convert an nn.Module PyTree into a simple container PyTree"""
     if isinstance(tree, nn.ModuleDict):
         return {key: convert_to_container(child) for key, child in tree.items()}
@@ -68,9 +70,9 @@ class DistrParamProj(nn.Module):
     def __init__(
         self,
         in_features: int,
-        out_features: int | tuple[int, ...] | list[int],
-        args_dim: PyTree[int, "T"],
-        domain_map: PyTree[Callable[[torch.Tensor], torch.Tensor], "T"],
+        out_features: Union[int, tuple[int, ...], list[int]],
+        args_dim: PyTree,
+        domain_map: PyTree,
         proj_layer: Callable[..., nn.Module] = MultiOutSizeLinear,
         **kwargs: Any,
     ):
@@ -113,7 +115,7 @@ class DistrParamProj(nn.Module):
             out_features if isinstance(out_features, int) else max(out_features)
         )
 
-    def forward(self, *args) -> PyTree[Float[torch.Tensor, "*batch out dim"], "T"]:
+    def forward(self, *args) -> PyTree:
         params_unbounded = tree_map(
             lambda proj: rearrange(
                 proj(*args),
@@ -132,8 +134,8 @@ class AffineTransformed(TransformedDistribution):
     def __init__(
         self,
         base_dist: Distribution,
-        loc: Optional[torch.Tensor | float] = None,
-        scale: Optional[torch.Tensor | float] = None,
+        loc: Optional[Union[torch.Tensor, float]] = None,
+        scale: Optional[Union[torch.Tensor, float]] = None,
         validate_args: Optional[bool] = None,
     ):
         self.loc = loc if loc is not None else 0.0
@@ -164,7 +166,7 @@ class DistributionOutput:
 
     def distribution(
         self,
-        distr_params: PyTree[torch.Tensor, "T"],
+        distr_params: PyTree,
         loc: Optional[torch.Tensor] = None,
         scale: Optional[torch.Tensor] = None,
         validate_args: Optional[bool] = None,
@@ -176,14 +178,20 @@ class DistributionOutput:
 
     def _distribution(
         self,
-        distr_params: PyTree[torch.Tensor, "T"],
+        distr_params: PyTree,
         validate_args: Optional[bool] = None,
     ) -> Distribution:
+        for param, value in distr_params.items(): # FIXME: my code
+            value = torch.nan_to_num(value, nan=0.0, posinf=1e9, neginf=-1e9) # clamp if needed
+            if param == "df" or param == "scale":
+                value = torch.clamp(value, min=1e-6)
+            distr_params[param] = value
+
         return self.distr_cls(**distr_params, validate_args=validate_args)
 
     @property
     @abc.abstractmethod
-    def args_dim(self) -> PyTree[int, "T"]:
+    def args_dim(self) -> PyTree:
         """
         Returns the dimensionality of the distribution parameters in the form of a pytree.
         For simple distributions, this will be a simple dictionary:
@@ -196,7 +204,7 @@ class DistributionOutput:
 
     @property
     @abc.abstractmethod
-    def domain_map(self) -> PyTree[Callable[[torch.Tensor], torch.Tensor], "T"]:
+    def domain_map(self) -> PyTree:
         """
         Returns a pytree of callables that maps the unconstrained distribution parameters
         to the range required by their distributions.
@@ -208,7 +216,7 @@ class DistributionOutput:
     def get_param_proj(
         self,
         in_features: int,
-        out_features: int | tuple[int, ...] | list[int],
+        out_features: Union[int, tuple[int, ...], list[int]],
         proj_layer: Callable[..., nn.Module] = MultiOutSizeLinear,
         **kwargs: Any,
     ) -> nn.Module:

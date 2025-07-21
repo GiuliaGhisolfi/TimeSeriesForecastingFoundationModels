@@ -16,7 +16,7 @@
 import math
 from collections import defaultdict
 from collections.abc import Callable, Sequence
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import lightning as L
 import numpy as np
@@ -24,15 +24,21 @@ import torch
 from jaxtyping import Bool, Float, Int
 from torch import nn
 from torch.distributions import Distribution
+from torch.nn.modules.container import ModuleDict, ModuleList
 
-from uni2ts_predictor.loss.packed import (PackedDistributionLoss, PackedLoss,
+from uni2ts.distribution._base import DistrParamProj
+from uni2ts.loss.packed import (PackedDistributionLoss, PackedLoss,
                                 PackedNLLLoss, PackedPointLoss)
-from uni2ts_predictor.module.norm import RMSNorm
-from uni2ts_predictor.module.position import (BinaryAttentionBias, LearnedEmbedding,
+from uni2ts.module.attention import GroupedQueryAttention
+from uni2ts.module.ffn import GatedLinearUnitFeedForward
+from uni2ts.module.norm import RMSNorm
+from uni2ts.module.position import (BinaryAttentionBias, LearnedEmbedding,
                                     LearnedProjection)
-from uni2ts_predictor.module.ts_embed import MultiInSizeLinear, MultiOutSizeLinear
-from uni2ts_predictor.optim import SchedulerType, get_scheduler
-from uni2ts_predictor.transform import (AddObservedMask, AddTimeIndex, AddVariateIndex,
+from uni2ts.module.transformer import (TransformerEncoder,
+                                       TransformerEncoderLayer)
+from uni2ts.module.ts_embed import MultiInSizeLinear, MultiOutSizeLinear
+from uni2ts.optim import SchedulerType, get_scheduler
+from uni2ts.transform import (AddObservedMask, AddTimeIndex, AddVariateIndex,
                               DefaultPatchSizeConstraints,
                               DummyValueImputation, EvalCrop,
                               EvalMaskedPrediction, EvalPad, ExtendMask,
@@ -77,7 +83,7 @@ class MoiraiFinetune(L.LightningModule):
         beta1: float = 0.9,
         beta2: float = 0.98,
         loss_func: PackedDistributionLoss = PackedNLLLoss(),
-        val_metric: Optional[PackedLoss | list[PackedLoss]] = None,
+        val_metric: Optional[Union[PackedLoss, list[PackedLoss]]] = None,
         lr: float = 1e-3,
         weight_decay: float = 1e-2,
         log_on_step: bool = False,
@@ -234,6 +240,10 @@ class MoiraiFinetune(L.LightningModule):
             MultiInSizeLinear,
             MultiOutSizeLinear,
             nn.Linear,
+            # new
+            TransformerEncoderLayer,
+            TransformerEncoder,
+            GatedLinearUnitFeedForward,
         )
         blacklist_params = (
             BinaryAttentionBias,
@@ -241,10 +251,17 @@ class MoiraiFinetune(L.LightningModule):
             RMSNorm,
             nn.Embedding,
             nn.LayerNorm,
+            # new
+            DistrParamProj,
+            GroupedQueryAttention,
+            MoiraiModule,
+            MoiraiFinetune,
+            ModuleList,
+            ModuleDict
         )
 
         for mn, m in self.named_modules():
-            for pn, p in m.named_parameters():
+            for pn, p in m.named_parameters(recurse=False):
                 if not p.requires_grad:
                     continue
 
@@ -259,7 +276,7 @@ class MoiraiFinetune(L.LightningModule):
         # validate that we considered every parameter
         param_dict = {pn: p for pn, p in self.named_parameters() if p.requires_grad}
         inter_params = decay & no_decay
-        union_params = decay | no_decay
+        union_params = decay or no_decay
         assert (
             len(inter_params) == 0
         ), f"parameters {str(inter_params)} made it into both decay/no_decay sets!"
@@ -308,7 +325,7 @@ class MoiraiFinetune(L.LightningModule):
     @property
     def train_transform_map(
         self,
-    ) -> dict[str | type, Callable[..., Transformation]]:
+    ) -> dict[str, type, Callable[..., Transformation]]:
         def default_train_transform():
             return (
                 GetPatchSize(
@@ -413,7 +430,7 @@ class MoiraiFinetune(L.LightningModule):
     @property
     def val_transform_map(
         self,
-    ) -> dict[str | type, Callable[..., Transformation]]:
+    ) -> dict[str, type, Callable[..., Transformation]]:
         def default_val_transform(
             offset: int,
             distance: int,

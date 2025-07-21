@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 import torch
@@ -41,11 +41,11 @@ String = np.character
 BatchedString = Character[np.ndarray, "batch"]
 UnivarTimeSeries = Num[np.ndarray, "time"]
 MultivarTimeSeries = Num[np.ndarray, "var time"]
-Data = DateTime | String | UnivarTimeSeries | MultivarTimeSeries
-BatchedData = (
-    BatchedDateTime | BatchedString | list[UnivarTimeSeries] | list[MultivarTimeSeries]
-)
-FlattenedData = DateTime | String | list[UnivarTimeSeries]
+#FIXME:
+Data = Union[DateTime, String, UnivarTimeSeries, MultivarTimeSeries] #DateTime | String | UnivarTimeSeries | MultivarTimeSeries
+BatchedData = Union[BatchedDateTime, BatchedString, list[UnivarTimeSeries], list[MultivarTimeSeries]]
+    #(BatchedDateTime | BatchedString | list[UnivarTimeSeries] | list[MultivarTimeSeries])
+FlattenedData =  Union[DateTime, String, list[UnivarTimeSeries]] #DateTime | String | list[UnivarTimeSeries]
 
 
 # Loader

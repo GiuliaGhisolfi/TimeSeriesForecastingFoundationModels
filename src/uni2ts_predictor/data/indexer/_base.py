@@ -15,10 +15,11 @@
 
 import abc
 from collections.abc import Iterable, Sequence
+from typing import Union
 
 import numpy as np
 
-from moirai.common.typing import BatchedData, Data
+from uni2ts.common.typing import BatchedData, Data
 
 
 class Indexer(abc.ABC, Sequence):
@@ -34,7 +35,7 @@ class Indexer(abc.ABC, Sequence):
         """
         self.uniform = uniform
 
-    def check_index(self, idx: int | slice | Iterable[int]):
+    def check_index(self, idx: Union[int, slice, Iterable[int]]):
         """
         Check the validity of a given index.
 
@@ -63,8 +64,8 @@ class Indexer(abc.ABC, Sequence):
             raise NotImplementedError(f"Unable to index on type: {type(idx)}")
 
     def __getitem__(
-        self, idx: int | slice | Iterable[int]
-    ) -> dict[str, Data | BatchedData]:
+        self, idx: Union[int, slice, Iterable[int]]
+    ):# -> dict[str, Data, BatchedData]: #dict[str, Union[Data, BatchedData]]:
         """
         Retrive the data from the underlying storage in dictionary format.
 
@@ -89,10 +90,10 @@ class Indexer(abc.ABC, Sequence):
         return self._getitem_iterable(indices)
 
     @abc.abstractmethod
-    def _getitem_int(self, idx: int) -> dict[str, Data]: ...
+    def _getitem_int(self, idx: int): ... # -> dict[str, Data]: ...
 
     @abc.abstractmethod
-    def _getitem_iterable(self, idx: Iterable[int]) -> dict[str, BatchedData]: ...
+    def _getitem_iterable(self, idx: Iterable[int]): ... # -> dict[str, BatchedData]: ...
 
     def get_uniform_probabilities(self) -> np.ndarray:
         """

@@ -24,19 +24,19 @@ from torch import nn
 from torch.distributions import Distribution
 from torch.utils._pytree import tree_map
 
-from uni2ts_predictor.common.torch_util import mask_fill, packed_attention_mask
-from uni2ts_predictor.distribution import DistributionOutput
-from uni2ts_predictor.module.norm import RMSNorm
-from uni2ts_predictor.module.packed_scaler import PackedNOPScaler, PackedStdScaler
-from uni2ts_predictor.module.position import (BinaryAttentionBias, QueryKeyProjection,
+from uni2ts.common.torch_util import mask_fill, packed_attention_mask
+from uni2ts.distribution import DistributionOutput
+from uni2ts.module.norm import RMSNorm
+from uni2ts.module.packed_scaler import PackedNOPScaler, PackedStdScaler
+from uni2ts.module.position import (BinaryAttentionBias, QueryKeyProjection,
                                     RotaryProjection)
-from uni2ts_predictor.module.transformer import TransformerEncoder
-from uni2ts_predictor.module.ts_embed import MultiInSizeLinear
+from uni2ts.module.transformer import TransformerEncoder
+from uni2ts.module.ts_embed import MultiInSizeLinear
 
 
 def encode_distr_output(
     distr_output: DistributionOutput,
-) -> dict[str, str | float | int]:
+) -> dict[str, str, float, int]:
     """Serialization function for DistributionOutput"""
 
     def _encode(val):
@@ -51,7 +51,7 @@ def encode_distr_output(
     return _encode(distr_output)
 
 
-def decode_distr_output(config: dict[str, str | float | int]) -> DistributionOutput:
+def decode_distr_output(config: dict[str, str, float, int]) -> DistributionOutput:
     """Deserialization function for DistributionOutput"""
     return instantiate(config, _convert_="all")
 
@@ -71,7 +71,7 @@ class MoiraiModule(
         distr_output: DistributionOutput,
         d_model: int,
         num_layers: int,
-        patch_sizes: tuple[int, ...],  # tuple[int, ...] | list[int]
+        patch_sizes: tuple[int, ...],  # tuple[int, ...], list[int]
         max_seq_len: int,
         attn_dropout_p: float,
         dropout_p: float,
@@ -155,6 +155,7 @@ class MoiraiModule(
         :param patch_size: patch size for each token
         :return: predictive distribution
         """
+        target = torch.nan_to_num(target, nan=0.0, posinf=1e9, neginf=-1e9) # FIXME: my code
         loc, scale = self.scaler(
             target,
             observed_mask * ~prediction_mask.unsqueeze(-1),

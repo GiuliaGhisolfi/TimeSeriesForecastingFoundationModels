@@ -15,7 +15,7 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 from jaxtyping import Bool, Float
@@ -67,8 +67,8 @@ class MaskedPrediction(MapFuncMixin, CheckArrNDimMixin, Transformation):
         data_entry: dict[str, Any],
         field: str,
         mask: np.ndarray,
-    ) -> np.ndarray | list[np.ndarray] | dict[str, np.ndarray]:
-        arr: np.ndarray | list[np.ndarray] | dict[str, np.ndarray] = data_entry[field]
+    ) -> Union[np.ndarray, list[np.ndarray], dict[str, np.ndarray]]:
+        arr: Union[np.ndarray, list[np.ndarray], dict[str, np.ndarray]] = data_entry[field]
         if isinstance(arr, list):
             return [self._truncate_arr(a, mask) for a in arr]
         if isinstance(arr, dict):
@@ -148,8 +148,8 @@ class EvalMaskedPrediction(MapFuncMixin, CheckArrNDimMixin, Transformation):
         data_entry: dict[str, Any],
         field: str,
         mask: np.ndarray,
-    ) -> np.ndarray | list[np.ndarray] | dict[str, np.ndarray]:
-        arr: np.ndarray | list[np.ndarray] | dict[str, np.ndarray] = data_entry[field]
+    ) -> Union[np.ndarray, list[np.ndarray], dict[str, np.ndarray]]:
+        arr: Union[np.ndarray, list[np.ndarray], dict[str, np.ndarray]] = data_entry[field]
         if isinstance(arr, list):
             return [self._truncate_arr(a, mask) for a in arr]
         if isinstance(arr, dict):

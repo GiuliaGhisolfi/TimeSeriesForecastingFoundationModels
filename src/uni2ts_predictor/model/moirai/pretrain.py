@@ -15,7 +15,7 @@
 
 from collections import defaultdict
 from collections.abc import Callable, Sequence
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import lightning as L
 import numpy as np
@@ -24,14 +24,14 @@ from jaxtyping import Bool, Float, Int
 from torch import nn
 from torch.distributions import Distribution
 
-from uni2ts_predictor.loss.packed import (PackedDistributionLoss, PackedLoss,
+from uni2ts.loss.packed import (PackedDistributionLoss, PackedLoss,
                                 PackedNLLLoss, PackedPointLoss)
-from uni2ts_predictor.module.norm import RMSNorm
-from uni2ts_predictor.module.position import (BinaryAttentionBias, LearnedEmbedding,
+from uni2ts.module.norm import RMSNorm
+from uni2ts.module.position import (BinaryAttentionBias, LearnedEmbedding,
                                     LearnedProjection)
-from uni2ts_predictor.module.ts_embed import MultiInSizeLinear, MultiOutSizeLinear
-from uni2ts_predictor.optim import SchedulerType, get_scheduler
-from uni2ts_predictor.transform import (AddObservedMask, AddTimeIndex, AddVariateIndex,
+from uni2ts.module.ts_embed import MultiInSizeLinear, MultiOutSizeLinear
+from uni2ts.optim import SchedulerType, get_scheduler
+from uni2ts.transform import (AddObservedMask, AddTimeIndex, AddVariateIndex,
                               DefaultPatchSizeConstraints,
                               DummyValueImputation, ExtendMask,
                               FlatPackCollection, FlatPackFields, GetPatchSize,
@@ -74,7 +74,7 @@ class MoiraiPretrain(L.LightningModule):
         beta1: float = 0.9,
         beta2: float = 0.98,
         loss_func: PackedDistributionLoss = PackedNLLLoss(),
-        val_metric: Optional[PackedLoss | list[PackedLoss]] = None,
+        val_metric: Optional[Union[PackedLoss, list[PackedLoss]]] = None,
         lr: float = 1e-3,
         weight_decay: float = 1e-2,
         log_on_step: bool = False,
@@ -289,7 +289,7 @@ class MoiraiPretrain(L.LightningModule):
         # validate that we considered every parameter
         param_dict = {pn: p for pn, p in self.named_parameters() if p.requires_grad}
         inter_params = decay & no_decay
-        union_params = decay | no_decay
+        union_params = decay or no_decay
         assert (
             len(inter_params) == 0
         ), f"parameters {str(inter_params)} made it into both decay/no_decay sets!"

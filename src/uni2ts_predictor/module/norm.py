@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from jaxtyping import Float
@@ -23,7 +23,7 @@ from torch import nn
 class RMSNorm(nn.Module):
     def __init__(
         self,
-        normalized_shape: int | list[int] | torch.Size,
+        normalized_shape: Union[int, list[int], torch.Size],
         eps: float = 1e-5,
         weight: bool = True,
         dtype: Optional[torch.dtype] = None,

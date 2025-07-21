@@ -14,23 +14,17 @@
 #  limitations under the License.
 
 from enum import Enum
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 from torch.utils.data import Dataset
 
-from moirai.common.sampler import Sampler, get_sampler
-from moirai.common.typing import (
-    BatchedData,
-    BatchedDateTime,
-    BatchedString,
-    Data,
-    FlattenedData,
-    MultivarTimeSeries,
-    UnivarTimeSeries,
-)
-from moirai.data.indexer import Indexer
-from moirai.transform import Transformation
+from uni2ts.common.sampler import Sampler, get_sampler
+from uni2ts.common.typing import (BatchedData, BatchedDateTime, BatchedString,
+                                  Data, FlattenedData, MultivarTimeSeries,
+                                  UnivarTimeSeries)
+from uni2ts.data.indexer._base import Indexer
+from uni2ts.transform import Transformation
 
 
 class SampleTimeSeriesType(Enum):
@@ -103,7 +97,7 @@ class TimeSeriesDataset(Dataset):
         """
         return int(np.ceil(self.num_ts * self.dataset_weight))
 
-    def _get_data(self, idx: int) -> dict[str, Data | BatchedData]:
+    def _get_data(self, idx: int) -> dict[str, Union[Data, BatchedData]]:
         """
         Obtains time series from Indexer object
         """

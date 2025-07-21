@@ -13,15 +13,16 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Callable
+from typing import Any, Callable
 
 import torch
-from jaxtyping import Float, PyTree
+from jaxtyping import Float
 from torch.distributions import LogNormal
 from torch.nn import functional as F
 
 from ._base import DistributionOutput
 
+PyTree = Any
 
 class LogNormalOutput(DistributionOutput):
     distr_cls = LogNormal
@@ -30,9 +31,7 @@ class LogNormalOutput(DistributionOutput):
     @property
     def domain_map(
         self,
-    ) -> PyTree[
-        Callable[[Float[torch.Tensor, "*batch 1"]], Float[torch.Tensor, "*batch"]], "T"
-    ]:
+    ) -> PyTree:
         return dict(loc=self._loc, scale=self._scale)
 
     @staticmethod
