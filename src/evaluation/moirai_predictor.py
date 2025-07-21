@@ -1,5 +1,6 @@
-from src.uni2ts.model.moirai import MoiraiForecast, MoiraiModule
-from src.uni2ts.model.moirai_moe import MoiraiMoEForecast, MoiraiMoEModule
+from src.uni2ts_predictor.model.moirai import MoiraiForecast, MoiraiModule
+from src.uni2ts_predictor.model.moirai import MoiraiFinetune, MoiraiModule
+
 
 def load_predictor(checkpoint: str, module: str, prediction_length: int=1, target_dim: int=1, 
     device_map: str="cuda"):
@@ -12,9 +13,6 @@ def load_predictor(checkpoint: str, module: str, prediction_length: int=1, targe
     Returns:
         object: The loaded model.
     """
-    from uni2ts.model.moirai import MoiraiFinetune
-    from src.uni2ts.model.moirai import MoiraiModule
-
     pretrained_module = MoiraiModule.from_pretrained(module).to(device_map)
 
     finetuned_model = MoiraiFinetune.load_from_checkpoint(
