@@ -918,32 +918,42 @@ class MoiraiForecast(L.LightningModule):
             prediction_mask,
         )
 
-    def _format_preds(
+    def _format_preds( # FIXME: my code
         self,
         patch_size: int,
-        preds: Float[torch.Tensor, "sample batch combine_seq patch"],
+        preds: torch.Tensor,  # shape: (sample, batch, combine_seq, ?, ?, patch)
         target_dim: int,
-    ) -> Float[torch.Tensor, "batch sample future_time *tgt"]:
+    ) -> torch.Tensor:
         """
-        Format the predictions to the expected output shape.
-        Args:
-            patch_size (int): The size of the patch.
-            preds (Float[torch.Tensor, "sample batch combine_seq patch"]): The predictions from the model.
-            target_dim (int): The dimension of the target variable.
+            Format the predictions to expected output shape.
+            Final output: (batch, sample, prediction_length * target_dim)
+        """
+        # FIX: flatten the extra dims before rearranging
+        # Target shape for rearrange: (sample, batch, combine_seq, patch)
+        if preds.ndim > 4:
+            # flatten all dims between combine_seq and patch
+            sample, batch, combine_seq, *middle, patch = preds.shape
+            middle_dim = int(torch.tensor(middle).prod())
+            preds = preds.reshape(sample, batch, combine_seq * middle_dim, patch)
+            print("After flattening middle dims:", preds.shape)
 
-        Returns:
-            Float[torch.Tensor, "batch sample future_time *tgt"]: The formatted predictions.
-        """
+        # Extract time window from token dimension
         start = target_dim * self.context_token_length(patch_size)
         end = start + target_dim * self.prediction_token_length(patch_size)
-        preds = preds[..., start:end, :patch_size]
+        preds = preds[..., start:end, :patch_size]  # (sample, batch, time, patch)
+
+        # Now rearrange to (batch, sample, time, dim)
         preds = rearrange(
             preds,
-            "sample ... (dim seq) patch -> ... sample (seq patch) dim",
+            "sample batch (dim seq) patch -> batch sample (seq patch) dim",
             dim=target_dim,
-        )[..., : self.hparams.prediction_length, :]
-        return preds.squeeze(-1)
+        )[..., : self.hparams.prediction_length, :]  # (B, S, T, D)
 
+        # Final reshape: (batch, sample, prediction_length * target_dim)
+        preds = preds.reshape(preds.shape[0], preds.shape[1], -1)
+
+        return preds
+    
     def get_default_transform(self) -> Transformation:
         transform = AsNumpyArray(
             field="target",

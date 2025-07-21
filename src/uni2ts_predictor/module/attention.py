@@ -29,6 +29,8 @@ from moirai_utils.scaled_dot_product_attention import \
 
 from .position import AttentionBias, QueryKeyProjection
 
+from moirai_utils.scaled_dot_product_attention import scaled_dot_product_attention
+
 # TODO: Support returning weights
 # TODO: Support caching (return past_key_value)
 
@@ -296,7 +298,7 @@ class GroupedQueryAttention(nn.Module):
             kv_time_id=kv_time_id,
         )
 
-        out = F.scaled_dot_product_attention(
+        out = scaled_dot_product_attention(#F.scaled_dot_product_attention(
             query,
             key,
             value,
