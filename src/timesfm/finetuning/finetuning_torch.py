@@ -155,7 +155,7 @@ class FinetuningConfig:
   master_addr: str = "localhost"
   use_wandb: bool = False
   wandb_project: str = "timesfm-finetuning"
-  log_every_n_steps: int = 50
+  log_every_n_steps: int = 1
   val_check_interval: float = 0.5
 
 

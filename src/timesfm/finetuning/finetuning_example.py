@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.multiprocessing as mp
-import yfinance as yf
+#import yfinance as yf
 from absl import app, flags
 from timesfm.finetuning.finetuning_torch import FinetuningConfig, TimesFMFinetuner
 from huggingface_hub import snapshot_download
@@ -72,11 +72,12 @@ class TimeSeriesDataset(Dataset):
     self.samples = []
     total_length = self.context_length + self.horizon_length
 
-    for start_idx in range(0, len(self.series) - total_length + 1):
-      end_idx = start_idx + self.context_length
-      x_context = self.series[start_idx:end_idx]
-      x_future = self.series[end_idx:end_idx + self.horizon_length]
-      self.samples.append((x_context, x_future))
+    for time_series in self.series:
+      for start_idx in range(0, len(time_series) - total_length + 1):
+        end_idx = start_idx + self.context_length
+        x_context = time_series[start_idx:end_idx]
+        x_future = time_series[end_idx:end_idx + self.horizon_length]
+        self.samples.append((x_context, x_future))
 
   def __len__(self) -> int:
     return len(self.samples)

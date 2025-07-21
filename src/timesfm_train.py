@@ -20,8 +20,8 @@ def train(
     epochs=EPOCHS,
     batch_size=4,
     learning_rate=3e-5,
-    context_len=2048, 
-    horizon_len=256
+    context_len=512, 
+    horizon_len=64
     ):
     gpu_ids = [int(x) for x in os.environ.get("CUDA_VISIBLE_DEVICES", "").split(",") if x.isdigit()]
     world_size = len(gpu_ids)
@@ -77,6 +77,6 @@ if __name__ == "__main__":
         epochs=EPOCHS,
         batch_size=256,
         learning_rate=3e-5,
-        context_len=2048, 
-        horizon_len=128
+        context_len=512, 
+        horizon_len=64
     )
