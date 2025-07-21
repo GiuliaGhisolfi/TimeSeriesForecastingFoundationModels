@@ -25,7 +25,7 @@ from jaxtyping import Bool, Int
 from torch.utils.data import DataLoader as TorchDataLoader
 from torch.utils.data import Dataset, Sampler, default_collate, default_convert
 
-from uni2ts.common.typing import BatchedSample, Sample
+from uni2ts_predictor.common.typing import BatchedSample, Sample
 
 
 @dataclass

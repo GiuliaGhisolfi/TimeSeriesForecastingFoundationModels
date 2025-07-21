@@ -25,8 +25,8 @@ from torch.distributions import (AffineTransform, Distribution,
                                  TransformedDistribution)
 from torch.utils._pytree import tree_flatten, tree_map, tree_unflatten
 
-from uni2ts.common.core import abstract_class_property
-from uni2ts.module.ts_embed import MultiOutSizeLinear
+from uni2ts_predictor.common.core import abstract_class_property
+from uni2ts_predictor.module.ts_embed import MultiOutSizeLinear
 
 PyTree = Any
 

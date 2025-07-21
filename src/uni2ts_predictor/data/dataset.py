@@ -19,12 +19,12 @@ from typing import Any, Union
 import numpy as np
 from torch.utils.data import Dataset
 
-from uni2ts.common.sampler import Sampler, get_sampler
-from uni2ts.common.typing import (BatchedData, BatchedDateTime, BatchedString,
+from uni2ts_predictor.common.sampler import Sampler, get_sampler
+from uni2ts_predictor.common.typing import (BatchedData, BatchedDateTime, BatchedString,
                                   Data, FlattenedData, MultivarTimeSeries,
                                   UnivarTimeSeries)
-from uni2ts.data.indexer._base import Indexer
-from uni2ts.transform import Transformation
+from uni2ts_predictor.data.indexer._base import Indexer
+from uni2ts_predictor.transform import Transformation
 
 
 class SampleTimeSeriesType(Enum):

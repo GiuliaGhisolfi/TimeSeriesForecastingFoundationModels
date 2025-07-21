@@ -19,7 +19,7 @@ from typing import Union
 
 import numpy as np
 
-from uni2ts.common.typing import BatchedData, Data
+from uni2ts_predictor.common.typing import BatchedData, Data
 
 
 class Indexer(abc.ABC, Sequence):

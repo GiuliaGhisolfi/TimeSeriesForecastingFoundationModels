@@ -21,8 +21,8 @@ import torch
 from einops import reduce
 from jaxtyping import Bool, Float, Int
 
-from uni2ts.common.core import abstract_class_property
-from uni2ts.common.torch_util import safe_div
+from uni2ts_predictor.common.core import abstract_class_property
+from uni2ts_predictor.common.torch_util import safe_div
 
 from ._base import PackedPointLoss
 

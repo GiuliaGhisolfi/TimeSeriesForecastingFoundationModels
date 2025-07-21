@@ -13,10 +13,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from uni2ts.model.moirai.finetune import MoiraiFinetune
-from uni2ts.model.moirai.forecast import MoiraiForecast
-from uni2ts.model.moirai.module import MoiraiModule
-from uni2ts.model.moirai.pretrain import MoiraiPretrain
+from uni2ts_predictor.model.moirai.finetune import MoiraiFinetune
+from uni2ts_predictor.model.moirai.forecast import MoiraiForecast
+from uni2ts_predictor.model.moirai.module import MoiraiModule
+from uni2ts_predictor.model.moirai.pretrain import MoiraiPretrain
 
 __all__ = [
     "MoiraiFinetune",
