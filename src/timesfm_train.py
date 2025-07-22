@@ -1,6 +1,7 @@
 import torch.multiprocessing as mp
 import torch
 import os
+import logging
 from timesfm_utils.load_data import get_data
 from timesfm.finetuning.finetuning_example import setup_process
 from timesfm.finetuning.finetuning_torch import FinetuningConfig
@@ -25,6 +26,8 @@ def train(
     ):
     gpu_ids = [int(x) for x in os.environ.get("CUDA_VISIBLE_DEVICES", "").split(",") if x.isdigit()]
     world_size = len(gpu_ids)
+    print("GPU ids: ", gpu_ids)
+    print("World size: ", world_size)
 
     mp.set_start_method("spawn", force=True)
     
@@ -72,6 +75,12 @@ def train(
     print(results)
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(asctime)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
     train(
         device=DEVICE_MAP,
         epochs=EPOCHS,

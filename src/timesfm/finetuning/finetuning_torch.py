@@ -291,7 +291,7 @@ class TimesFMFinetuner:
     total_loss = 0.0
     num_batches = len(train_loader)
 
-    for batch in train_loader:
+    for batch_idx, batch in enumerate(train_loader):
       loss, _ = self._process_batch(batch)
 
       optimizer.zero_grad()
@@ -299,6 +299,11 @@ class TimesFMFinetuner:
       optimizer.step()
 
       total_loss += loss.item()
+
+      self.logger.info(
+                f"[Epoch {self.current_epoch if hasattr(self, 'current_epoch') else '?'}] "
+                f"Step {batch_idx}/{num_batches} - Loss: {loss.item():.4f}"
+            )
 
     avg_loss = total_loss / num_batches
 
