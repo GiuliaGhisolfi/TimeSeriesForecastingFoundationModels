@@ -4,7 +4,7 @@ import os
 import logging
 from timesfm_utils.load_data import get_data
 from timesfm.finetuning.finetuning_example import setup_process
-from timesfm.finetuning.finetuning_torch import FinetuningConfig
+from timesfm.finetuning.finetuning_torch import FinetuningConfig, TimesFMFinetuner
 
 from timesfm import TimesFm, TimesFmCheckpoint, TimesFmHparams
 from timesfm.pytorch_patched_decoder import PatchedTimeSeriesDecoder
@@ -46,31 +46,53 @@ def train(
 
     model = PatchedTimeSeriesDecoder(tfm._model_config)
 
-    # Create config
-    config = FinetuningConfig(
-        batch_size=batch_size,
-        num_epochs=epochs,
-        learning_rate=learning_rate,
-        use_wandb=False,
-        distributed=True,
-        gpu_ids=gpu_ids,
-        log_every_n_steps=1,
-        val_check_interval=0.5,
-    )
-
     train_dataset, val_dataset = get_data(context_len, horizon_len)
-    manager = mp.Manager()
-    return_dict = manager.dict()
 
-    # Launch processes
-    mp.spawn(
-        setup_process,
-        args=(world_size, model, config, train_dataset, val_dataset, return_dict),
-        nprocs=world_size,
-        join=True,
-    )
+    if world_size <= 1:
+        config = FinetuningConfig(
+            batch_size=batch_size,
+            num_epochs=epochs,
+            learning_rate=learning_rate,
+            use_wandb=False,
+            freq_type=1,
+            log_every_n_steps=1,
+            val_check_interval=0.5,
+            use_quantile_loss=True
+        )
 
-    results = return_dict.get("results", None)
+        finetuner = TimesFMFinetuner(model, config)
+
+        print("\nStarting finetuning...")
+        results = finetuner.finetune(
+            train_dataset=train_dataset,
+            val_dataset=val_dataset
+            )
+    else:
+        # Create config
+        config = FinetuningConfig(
+            batch_size=batch_size,
+            num_epochs=epochs,
+            learning_rate=learning_rate,
+            use_wandb=False,
+            distributed=True,
+            gpu_ids=gpu_ids,
+            log_every_n_steps=1,
+            val_check_interval=0.5,
+        )
+        
+        manager = mp.Manager()
+        return_dict = manager.dict()
+
+        # Launch processes
+        print("\nStarting finetuning...")
+        mp.spawn(
+            setup_process,
+            args=(world_size, model, config, train_dataset, val_dataset, return_dict),
+            nprocs=world_size,
+            join=True,
+        )
+
+        results = return_dict.get("results", None)
 
     print(results)
 
@@ -87,5 +109,5 @@ if __name__ == "__main__":
         batch_size=256,
         learning_rate=3e-5,
         context_len=512, 
-        horizon_len=64
+        horizon_len=128 #64
     )
