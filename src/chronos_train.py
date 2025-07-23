@@ -35,14 +35,14 @@ from chronos_utils.dataset_name import DATASET_NAME_LIST
 from chronos_utils.frequency_map import FREQ_MAP
 
 DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/dataset_gluonts/"
-MODEL_NAME = "chronos-bolt-small" #"chronos-bolt-tiny"  # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
+MODEL_NAME = "chronos-bolt-base" #"chronos-bolt-tiny"  # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
 
 RANDOM_SEED = 42
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
 def load_model(
-    model_id="google/t5-efficient-small",
+    model_id="google/t5-efficient-base",
     model_type="seq2seq",
     vocab_size=4096,
     random_init=False,
