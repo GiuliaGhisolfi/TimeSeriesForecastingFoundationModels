@@ -13,7 +13,7 @@ def load_predictor(checkpoint: str, module: str, prediction_length: int=1, targe
     Returns:
         object: The loaded model.
     """
-    pretrained_module = MoiraiModule.from_pretrained(module)#.to(device_map)
+    pretrained_module = MoiraiModule.from_pretrained(module).to(device_map)
 
     finetuned_model = MoiraiFinetune.load_from_checkpoint(
         checkpoint_path=checkpoint,
@@ -31,7 +31,7 @@ def load_predictor(checkpoint: str, module: str, prediction_length: int=1, targe
         lr=1e-7,
         weight_decay=1e-5,
         log_on_step=False,
-    )#.to(device_map)
+    ).to(device_map)
 
     model = MoiraiForecast(
         module=finetuned_model.module,
@@ -42,6 +42,6 @@ def load_predictor(checkpoint: str, module: str, prediction_length: int=1, targe
         target_dim=target_dim,
         feat_dynamic_real_dim=0,
         past_feat_dynamic_real_dim=0,
-    )#.to(device_map)
+    ).to(device_map)
     
     return model.create_predictor(batch_size=32)
