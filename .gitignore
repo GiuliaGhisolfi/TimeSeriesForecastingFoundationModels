@@ -3,15 +3,8 @@ __pycache__
 
 data/splitted_moirai_dataset
 data/splitted_moirai_dataset.zip
-data/chronos_benchmark
-data/gift_benchmark
 
 results/dataset_info.csv
 results/dataset_splitted_info.csv
 results/dataset_splitted_train_val_info.csv
 results/dataset_train_val_info.csv
-
-results_moirai
-moirai_checkpoints
-logs
-chronos_output

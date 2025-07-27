@@ -8,11 +8,8 @@ from huggingface_hub import snapshot_download
 from src.gift_eval.data import Dataset
 
 
-def load_gift_data(colab: bool = True):
+def load_gift_data(colab: bool = False):
     # make directory for datasets if it does not exist
-    if not os.path.exists("data/gift_benchmark"):
-        os.makedirs("data/gift_benchmark")
-    
     if colab:
         local_dir = "data/gift_benchmark"
         os.makedirs(local_dir, exist_ok=True)
@@ -23,6 +20,10 @@ def load_gift_data(colab: bool = True):
             local_dir=local_dir,
             local_dir_use_symlinks=False
         )
+    """else:
+        gift_eval_path = os.getenv("GIFT_EVAL")
+        if not os.path.exists(gift_eval_path):
+            os.makedirs(gift_eval_path)"""
 
     # Load environment variables
     load_dotenv()
@@ -50,7 +51,7 @@ def load_gift_data(colab: bool = True):
                 else:
                     dataset_names.append(dataset_dir.name)
 
-        print("Available datasets in GIFT_EVAL:")
+        print(f"Available datasets in {gift_eval_path}:")
         for name in sorted(dataset_names):
             print(f"- {name}")
     else:
