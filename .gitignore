@@ -1,10 +1,5 @@
 __pycache__
 .vscode
-
 data/splitted_moirai_dataset
 data/splitted_moirai_dataset.zip
-
-results/dataset_info.csv
-results/dataset_splitted_info.csv
-results/dataset_splitted_train_val_info.csv
-results/dataset_train_val_info.csv
+results/dataset
