@@ -35,14 +35,14 @@ from chronos_utils.dataset_name import DATASET_NAME_LIST
 from chronos_utils.frequency_map import FREQ_MAP
 
 DATA_PATH = "/raid/decaro/TimeSeriesForecastingFoundationModels/data/dataset_gluonts/"
-MODEL_NAME = "chronos-bolt-base" #"chronos-bolt-tiny"  # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
+MODEL_NAME = "chronos-bolt-tiny" #"chronos-bolt-tiny"  # "chronos-bolt-mini", "chronos-bolt-small", "chronos-bolt-base"
 
 RANDOM_SEED = 42
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
 def load_model(
-    model_id="google/t5-efficient-base",
+    model_id="google/t5-efficient-tiny",
     model_type="seq2seq",
     vocab_size=4096,
     random_init=False,
@@ -84,16 +84,16 @@ def load_model(
 @use_yaml_config(param_name="config")
 def main(
     probability: Optional[str] = None,
-    context_length: int = 512,
-    prediction_length: int = 64,
-    min_past: int = 64,
-    max_steps: int = 200_000,
+    context_length: int = 1024,
+    prediction_length: int = 128,
+    min_past: int = 128,
+    max_steps: int = 100_000,#200_000,
     save_steps: int = 500,
     log_steps: int = 500,
     per_device_train_batch_size: int = 32,
-    learning_rate: float = 1e-3,
+    learning_rate: float = 1e-7,#1e-3,
     optim: str = "adamw_torch_fused",
-    shuffle_buffer_length: int = 100,
+    shuffle_buffer_length: int = 200,
     gradient_accumulation_steps: int = 2,
     model_id: str = "amazon/"+MODEL_NAME,
     model_type: str = "seq2seq",
@@ -103,7 +103,7 @@ def main(
     tf32: bool = False,
     torch_compile: bool = True,
     tokenizer_class: str = "MeanScaleUniformBins",
-    tokenizer_kwargs: str = "{'low_limit': -15.0, 'high_limit': 15.0}",
+    tokenizer_kwargs: str = "{'low_limit': -20.0, 'high_limit': 20.0}",
     n_tokens: int = 4096,
     n_special_tokens: int = 2,
     pad_token_id: int = 0,
@@ -112,8 +112,8 @@ def main(
     lr_scheduler_type: str = "linear",
     warmup_ratio: float = 0.0,
     dataloader_num_workers: int = 1,
-    max_missing_prop: float = 0.9,
-    num_samples: int = 20,
+    max_missing_prop: float = 0.1,
+    num_samples: int = 30,
     temperature: float = 1.0,
     top_k: int = 50,
     top_p: float = 1.0,
